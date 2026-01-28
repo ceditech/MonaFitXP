@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "WorkoutAssist",
+    "slug": "WorkoutAssist",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ]
+  }
+}

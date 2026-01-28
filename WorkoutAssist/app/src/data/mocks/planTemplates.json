@@ -1,0 +1,68 @@
+[
+    {
+        "id": "tpl_001",
+        "name": "Full Body A",
+        "difficulty": "Beginner",
+        "blocks": [
+            {
+                "exerciseId": "ex_001",
+                "sets": 3,
+                "reps": 10
+            },
+            {
+                "exerciseId": "ex_002",
+                "sets": 3,
+                "reps": 10
+            },
+            {
+                "exerciseId": "ex_006",
+                "sets": 3,
+                "reps": 12
+            }
+        ]
+    },
+    {
+        "id": "tpl_002",
+        "name": "Upper Power",
+        "difficulty": "Intermediate",
+        "blocks": [
+            {
+                "exerciseId": "ex_002",
+                "sets": 5,
+                "reps": 5
+            },
+            {
+                "exerciseId": "ex_004",
+                "sets": 4,
+                "reps": 6
+            },
+            {
+                "exerciseId": "ex_005",
+                "sets": 3,
+                "reps": 8
+            }
+        ]
+    },
+    {
+        "id": "tpl_003",
+        "name": "Lower Hypertrophy",
+        "difficulty": "Intermediate",
+        "blocks": [
+            {
+                "exerciseId": "ex_001",
+                "sets": 4,
+                "reps": 8
+            },
+            {
+                "exerciseId": "ex_003",
+                "sets": 3,
+                "reps": 10
+            },
+            {
+                "exerciseId": "ex_007",
+                "sets": 3,
+                "reps": 12
+            }
+        ]
+    }
+]

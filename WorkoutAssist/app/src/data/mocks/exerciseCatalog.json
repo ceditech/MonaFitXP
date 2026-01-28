@@ -1,0 +1,142 @@
+[
+  {
+    "id": "ex_001",
+    "name": "Barbell Squat",
+    "muscles": ["Quads", "Glutes"],
+    "type": "weight",
+    "equipment": "barbell"
+  },
+  {
+    "id": "ex_002",
+    "name": "Bench Press",
+    "muscles": ["Chest", "Triceps"],
+    "type": "weight",
+    "equipment": "barbell"
+  },
+  {
+    "id": "ex_003",
+    "name": "Deadlift",
+    "muscles": ["Back", "Hamstrings"],
+    "type": "weight",
+    "equipment": "barbell"
+  },
+  {
+    "id": "ex_004",
+    "name": "Overhead Press",
+    "muscles": ["Shoulders"],
+    "type": "weight",
+    "equipment": "barbell"
+  },
+  {
+    "id": "ex_005",
+    "name": "Pull Up",
+    "muscles": ["Back", "Biceps"],
+    "type": "bodyweight",
+    "equipment": "pull_up_bar"
+  },
+  {
+    "id": "ex_006",
+    "name": "Dumbbell Row",
+    "muscles": ["Back", "Biceps"],
+    "type": "weight",
+    "equipment": "dumbbell"
+  },
+  {
+    "id": "ex_007",
+    "name": "Lunge",
+    "muscles": ["Quads", "Glutes"],
+    "type": "bodyweight",
+    "equipment": "none"
+  },
+  {
+    "id": "ex_008",
+    "name": "Push Up",
+    "muscles": ["Chest", "Triceps"],
+    "type": "bodyweight",
+    "equipment": "none"
+  },
+  {
+    "id": "ex_009",
+    "name": "Plank",
+    "muscles": ["Core"],
+    "type": "bodyweight",
+    "equipment": "none"
+  },
+  {
+    "id": "ex_010",
+    "name": "Bicep Curl",
+    "muscles": ["Biceps"],
+    "type": "weight",
+    "equipment": "dumbbell"
+  },
+    {
+    "id": "ex_011",
+    "name": "Tricep Extension",
+    "muscles": ["Triceps"],
+    "type": "weight",
+    "equipment": "cable"
+  },
+  {
+    "id": "ex_012",
+    "name": "Leg Press",
+    "muscles": ["Quads"],
+    "type": "weight",
+    "equipment": "machine"
+  },
+  {
+    "id": "ex_013",
+    "name": "Lat Pulldown",
+    "muscles": ["Back"],
+    "type": "weight",
+    "equipment": "cable"
+  },
+  {
+    "id": "ex_014",
+    "name": "Seated Row",
+    "muscles": ["Back"],
+    "type": "weight",
+    "equipment": "cable"
+  },
+  {
+    "id": "ex_015",
+    "name": "Face Pull",
+    "muscles": ["Shoulders", "Rear Delts"],
+    "type": "weight",
+    "equipment": "cable"
+  },
+  {
+    "id": "ex_016",
+    "name": "Calf Raise",
+    "muscles": ["Calves"],
+    "type": "weight",
+    "equipment": "machine"
+  },
+  {
+    "id": "ex_017",
+    "name": "Hamstring Curl",
+    "muscles": ["Hamstrings"],
+    "type": "weight",
+    "equipment": "machine"
+  },
+  {
+    "id": "ex_018",
+    "name": "Lateral Raise",
+    "muscles": ["Shoulders"],
+    "type": "weight",
+    "equipment": "dumbbell"
+  },
+  {
+    "id": "ex_019",
+    "name": "Box Jump",
+    "muscles": ["Legs"],
+    "type": "cardio",
+    "equipment": "box"
+  },
+  {
+    "id": "ex_020",
+    "name": "Burpee",
+    "muscles": ["Full Body"],
+    "type": "cardio",
+    "equipment": "none"
+  }
+]
