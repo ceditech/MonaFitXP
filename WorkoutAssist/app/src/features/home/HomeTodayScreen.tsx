@@ -1,5 +1,5 @@
 import { PlaceholderScreen } from '../../shared/ui/PlaceholderScreen';
-import { useSession } from '../../app/context/SessionContext';
+import { useSession } from '../../session/SessionProvider';
 
 export const HomeTodayScreen = ({ navigation }: any) => {
     const { signOut } = useSession();

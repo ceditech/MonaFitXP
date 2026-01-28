@@ -5,7 +5,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { useSession } from '../context/SessionContext';
+import { useSession } from '../../session/SessionProvider';
 import { View, ActivityIndicator } from 'react-native';
 
 // Screens
@@ -84,7 +84,8 @@ const MainNavigator = () => (
 );
 
 export const RootNavigator = () => {
-    const { uid, isLoading } = useSession();
+    const { session } = useSession();
+    const { uid, isLoading } = session;
 
     if (isLoading) {
         return (

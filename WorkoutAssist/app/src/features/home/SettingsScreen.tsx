@@ -3,7 +3,7 @@
 import React from 'react';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { PlaceholderScreen } from '../../shared/ui/PlaceholderScreen';
-import { useSession } from '../../app/context/SessionContext';
+import { useSession } from '../../session/SessionProvider';
 
 interface Props {
     navigation: NativeStackNavigationProp<any>;

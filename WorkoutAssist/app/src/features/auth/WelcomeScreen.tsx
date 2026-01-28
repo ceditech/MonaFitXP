@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Button } from '../../shared/ui/Button';
 import { Colors, Spacing, Typography } from '../../shared/ui/Theme';
-import { useSession } from '../../app/context/SessionContext';
+import { useSession } from '../../session/SessionProvider';
 
 // Logo component using SVG-like approach with standard RN components
 const Logo = () => (
@@ -28,8 +28,8 @@ const Logo = () => (
 );
 
 export const WelcomeScreen = ({ navigation }: any) => {
-    const { createGuest } = useSession();
-    const [isGuestLoading, setIsGuestLoading] = useState(false);
+    const { ensureGuestSession, session } = useSession();
+    const isGuestLoading = session.isLoading;
 
     useEffect(() => {
         console.log('[Analytics] welcome_viewed');
@@ -37,20 +37,13 @@ export const WelcomeScreen = ({ navigation }: any) => {
 
     const handleContinueAsGuest = async () => {
         console.log('[Analytics] continue_as_guest_clicked');
-        setIsGuestLoading(true);
 
-        // Simulate loading state as per Artifact 2 & 10
-        setTimeout(async () => {
-            try {
-                await createGuest();
-                // Navigation will happen automatically via RootNavigator's UID check
-                // but just in case or for specific onboarding:
-                navigation.navigate('OnboardingWizard');
-            } catch (error) {
-                console.error('Guest creation failed', error);
-                setIsGuestLoading(false);
-            }
-        }, 1000);
+        try {
+            await ensureGuestSession();
+            // Navigation handled by RootNavigator
+        } catch (error) {
+            console.error('Guest creation failed', error);
+        }
     };
 
     const handleSignIn = () => {

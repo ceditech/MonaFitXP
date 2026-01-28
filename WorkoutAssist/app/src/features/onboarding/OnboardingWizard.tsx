@@ -2,13 +2,13 @@
 // app/src/features/onboarding/OnboardingWizard.tsx
 import React from 'react';
 import { PlaceholderScreen } from '../../shared/ui/PlaceholderScreen';
-import { useSession } from '../../app/context/SessionContext';
+import { useSession } from '../../session/SessionProvider';
 
 export const OnboardingWizard = ({ navigation }: any) => {
-    const { createGuest } = useSession();
+    const { ensureGuestSession } = useSession();
 
     const handleFinish = async () => {
-        await createGuest();
+        await ensureGuestSession();
         // Navigation will be handled by RootNavigator switching stacks
     };
 
