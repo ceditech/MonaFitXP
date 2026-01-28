@@ -65,7 +65,7 @@ export const WelcomeScreen = ({ navigation }: any) => {
 
     return (
         <ImageBackground
-            source={require('../../assets/welcome_bg.png')}
+            source={require('../../assets/mock/welcome_bg.png')}
             style={styles.background}
             resizeMode="cover"
         >
