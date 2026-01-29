@@ -70,20 +70,64 @@ export class MockWorkoutRepository implements IWorkoutRepository {
     }
 
     // --- Active Plan ---
-    async getActivePlan(uid: string): Promise<any | null> {
-        const key = `${DATA_PREFIX}${uid}_active_plan`;
-        if (this.memCache.has(key)) return this.memCache.get(key);
-
+    async getActivePlan(uid: string): Promise<UserPlan | null> {
+        const key = `${DATA_PREFIX}${uid}_user_plans`;
+        let plans: UserPlan[] = [];
         const stored = await AsyncStorage.getItem(key);
         if (stored) {
-            const parsed = JSON.parse(stored);
-            this.memCache.set(key, parsed);
-            return parsed;
+            plans = JSON.parse(stored);
         }
-        return null;
+        const activeUserPlan = plans.find(p => p.active);
+        if (!activeUserPlan) return null;
+
+        // Hydrate with template info
+        const template = await this.getPlanTemplate(activeUserPlan.templateId);
+        if (!template) return activeUserPlan;
+
+        return {
+            ...activeUserPlan,
+            ...template, // This adds name, difficulty, sessionMinutes (once added), etc.
+            id: activeUserPlan.id // Ensure we keep the user plan ID
+        } as any;
+    }
+
+    async createUserPlan(uid: string, plan: Omit<UserPlan, 'id'>): Promise<string> {
+        const key = `${DATA_PREFIX}${uid}_user_plans`;
+        const id = Math.random().toString(36).substr(2, 9);
+        const newPlan: UserPlan = { ...plan, id };
+
+        const stored = await AsyncStorage.getItem(key);
+        let plans: UserPlan[] = stored ? JSON.parse(stored) : [];
+
+        // If the new plan is active, deactivate others
+        if (newPlan.active) {
+            plans = plans.map(p => ({ ...p, active: false }));
+        }
+
+        plans.push(newPlan);
+        await AsyncStorage.setItem(key, JSON.stringify(plans));
+        this.memCache.set(key, plans);
+
+        return id;
+    }
+
+    async activatePlan(uid: string, planId: string): Promise<void> {
+        const key = `${DATA_PREFIX}${uid}_user_plans`;
+        const stored = await AsyncStorage.getItem(key);
+        if (!stored) return;
+
+        let plans: UserPlan[] = JSON.parse(stored);
+        plans = plans.map(p => ({
+            ...p,
+            active: p.id === planId
+        }));
+
+        await AsyncStorage.setItem(key, JSON.stringify(plans));
+        this.memCache.set(key, plans);
     }
 
     async saveActivePlan(uid: string, plan: any): Promise<void> {
+        // Keep for legacy/backward compatibility if needed by other screens
         const key = `${DATA_PREFIX}${uid}_active_plan`;
         this.memCache.set(key, plan);
         await AsyncStorage.setItem(key, JSON.stringify(plan));

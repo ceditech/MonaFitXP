@@ -60,6 +60,14 @@ export interface WorkoutLog {
   totalVolume: number;
 }
 
+export interface UserPlan {
+  id: string;
+  templateId: string;
+  scheduleDays: string[]; // ['Mon', 'Wed', 'Fri']
+  createdAt: string;
+  active: boolean;
+}
+
 export interface IWorkoutRepository {
   // Catalogs
   getExercises(): Promise<Exercise[]>;
@@ -71,8 +79,10 @@ export interface IWorkoutRepository {
   saveUserProfile(uid: string, profile: Partial<UserProfile>): Promise<void>;
 
   // Plans
-  getActivePlan(uid: string): Promise<any | null>; // Simplify for now
-  saveActivePlan(uid: string, plan: any): Promise<void>;
+  getActivePlan(uid: string): Promise<UserPlan | null>;
+  createUserPlan(uid: string, plan: Omit<UserPlan, 'id'>): Promise<string>;
+  activatePlan(uid: string, planId: string): Promise<void>;
+  saveActivePlan(uid: string, plan: any): Promise<void>; // Keep for backward compatibility if needed
 
   // Workout Execution
   getHistory(uid: string): Promise<WorkoutLog[]>;
