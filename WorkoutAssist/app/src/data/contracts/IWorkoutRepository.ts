@@ -64,6 +64,7 @@ export interface IWorkoutRepository {
   // Catalogs
   getExercises(): Promise<Exercise[]>;
   getPlanTemplates(): Promise<PlanTemplate[]>;
+  getPlanTemplate(id: string): Promise<PlanTemplate | null>;
 
   // User Data
   getUserProfile(uid: string): Promise<UserProfile | null>;

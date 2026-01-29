@@ -29,6 +29,11 @@ export class MockWorkoutRepository implements IWorkoutRepository {
         return planTemplates as PlanTemplate[];
     }
 
+    async getPlanTemplate(id: string): Promise<PlanTemplate | null> {
+        const templates = await this.getPlanTemplates();
+        return templates.find(t => t.id === id) || null;
+    }
+
     // --- User Profile ---
     async getUserProfile(uid: string): Promise<UserProfile | null> {
         const key = `${DATA_PREFIX}${uid}_profile`;
