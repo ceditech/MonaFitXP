@@ -120,6 +120,8 @@ export interface IWorkoutRepository {
 
   // History
   getHistory(uid: string): Promise<WorkoutLog[]>;
+  getWorkout(uid: string, workoutId: string): Promise<InProgressWorkout | null>;
+  listWorkoutSets(uid: string, workoutId: string): Promise<WorkoutSessionSet[]>;
   saveWorkoutSession(uid: string, session: WorkoutLog): Promise<void>;
 
   // Metrics

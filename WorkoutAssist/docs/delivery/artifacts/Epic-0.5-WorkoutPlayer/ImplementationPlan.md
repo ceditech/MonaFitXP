@@ -1,92 +1,95 @@
-# WorkoutPlayerScreen (P0.5)
+# WorkoutSummaryScreen (P0.5)
+
+Build WorkoutSummaryScreen to display a recap after completion.
 
 ## Artifact 1 — UI Flow Map
 ```mermaid
 graph TD
-    Home[HomeTodayScreen] -- "Start Workout" --> Player[WorkoutPlayerScreen]
-    Player -- "Pause/App Restart" --> Player
-    Player -- "Finish" --> Summary[WorkoutSummaryScreen]
-    Player -- "Back/Abandon" --> Home
+    Player[WorkoutPlayerScreen] -- "Finish" --> Summary[WorkoutSummaryScreen]
+    Summary -- "Done" --> History[WorkoutHistoryScreen]
+    Summary -- "Back to Home" --> Home[HomeTodayScreen]
 ```
 
 ## Artifact 2 — UI Spec (Layout + States)
 | UI Element | Layout Type | Description |
 | :--- | :--- | :--- |
-| **Header** | Sticky | Name, Timer, "End" button (with confirm). |
-| **Progress bar** | Horizonatal | Shows completed sets / total sets. |
-| **Exercise Detail** | Scrollable | Exercise Name, Video/Img placeholder. |
-| **Set Card** | Grid/Row | Target (reps/weight), Inputs (reps/weight), "Complete" toggle. |
-| **Rest Overlay** | Transparent Modal | 60s countdown, "+15s", "Skip" buttons. |
-| **Navigation btns** | Fixed Bottom | "Previous Exercise", "Next Exercise" / "Finish". |
+| **Header** | Sticky | "Workout Complete" title + Workout Name subtitle. |
+| **Summary Tiles** | 3-Column Row | Duration (mins), Total Sets, Total Volume (Reps * Weight). |
+| **Exercise Recap List** | Scrollable List | Grouped by Exercise. Shows name, total sets, and "Best Set" highlight. |
+| **Primary CTA** | Full-width Button | "Done" -> Navigates to history tab. |
+| **Secondary CTA** | Ghost Button | "Back to Home" -> Navigates to today tab. |
 
 ### States
-- **Loading**: Fetching workout or active plan.
-- **RESTING**: Show rest timer modal.
-- **COMPLETING**: Submitting summary to repository.
+- **Loading**: Centered ActivityIndicator.
+- **Error**: Error message with "Retry" button.
+- **Not Found**: "Workout not found" fallback with "Back to Home" CTA.
 
 ## Artifact 3 — Component Tree
-- `WorkoutPlayerScreen` (Container)
-  - `WorkoutHeader` (Name, Duration, EndBtn)
-  - `ProgressBar`
-  - `ExercisePager` (Horizontal ScrollView?)
-    - `ExerciseView`
-      - `ExerciseInfo`
-      - `SetLoggerList`
-        - `SetRow` (Inputs + Checkbox)
-  - `RestTimerModal`
-  - `PlayerControls` (Prev/Next/Finish)
+- `WorkoutSummaryScreen` (Container)
+  - `SafeAreaView`
+    - `ScrollView`
+      - `SummaryHeader` (Title, Workout Name)
+      - `SummaryStrip` (Duration, Sets, Volume tiles)
+      - `ExerciseRecapSection`
+        - `RecapCard` (per Exercise)
+          - `ExerciseName`
+          - `StatsLine` (Sets, Best Set)
+    - `Footer`
+      - `DoneButton`
+      - `HomeButton`
 
 ## Artifact 4 — Navigation Contract
-- **WorkoutPlayer** (params: `{ planId?: string }`)
 - **WorkoutSummary** (params: `{ workoutId: string }`)
+- Redirects to:
+  - `MainTabs` -> `WorkoutHistory`
+  - `MainTabs` -> `HomeToday`
 
 ## Artifact 5 — Firestore Reads/Writes
 > [!NOTE]
-> Mock Implementation. Mapping for future:
-- **Read/Write**: `users/${uid}/inProgressWorkout` (Singleton for persistence)
-- **Increment**: `users/${uid}/metrics` (On completion)
-- **Write**: `users/${uid}/history` (Completed session)
+> Currently using `WorkoutRepo` (Mock). Mapping for future Firestore:
+- **Read**: `users/${uid}/history/${workoutId}` (Header & Summary)
+- **Read**: `users/${uid}/history/${workoutId}/sets` (Recap data)
 
 ## Artifact 6 — Firestore Schema Diff
-No changes needed.
+Updated `completeWorkout` repository logic to persist full session snapshot (sets) instead of just summary log.
 
 ## Artifact 7 — Security Rules Diff
 No changes needed.
 
 ## Artifact 8 — Implementation Plan (React Native)
-### 1. Repository
-- Update `MockWorkoutRepository` with `startWorkout`, `getInProgressWorkout`, `logSet`, `updateWorkoutCursor`, `completeWorkout`.
-- Use `AsyncStorage` to store the `in_progress` workout object.
+### 1. Repository Extensions
+- Add `getWorkoutDetail(uid, workoutId)` to `IWorkoutRepository`.
+- Update `MockWorkoutRepository.completeWorkout` to save detailed metadata.
+- Implement logic to compute "Best Set" per exercise.
 
-### 2. UI Development
-- Create `WorkoutPlayerScreen.tsx`.
-- Implement local state for the active excise and set (cursor).
-- Build the `RestTimer` logic (useEffect with setInterval).
+### 2. UI Implementation
+- Create `WorkoutSummaryScreen.tsx` in `features/workout`.
+- Implement summary calculation logic (if not provided by repo).
+- Style tiles with `Colors.card` and `brandPurple` accents.
 
-### 3. Logic & Navigation
-- Handle mounting: Check for in-progress workout first.
-- Handle "Next" exercise: increment cursor and show rest timer if applicable.
-- Handle "Finish": Aggregate logs, call `completeWorkout`, navigate to Summary.
+### 3. Polish
+- Add subtle entrance animations for summary tiles.
+- Ensure volume units are handled correctly.
 
 ## Artifact 9 — Analytics Events
-- `workout_started`: { planId }
-- `set_logged`: { exerciseId }
-- `workout_completed`: { duration, totalSets }
-- `workout_abandoned`: { reason }
+- `workout_summary_viewed`: { workoutId }
+- `workout_summary_done_clicked`: Navigating to history.
+- `workout_summary_home_clicked`: Navigating to home.
 
 ## Artifact 10 — Test Checklist
-- [ ] Verify workout resumes after app reload (simulated).
-- [ ] Verify rest timer appears after clicking "Complete set".
-- [ ] Verify summary calculation (total volume).
-- [ ] Verify "Finish" button only appears on the last exercise.
+- [ ] Load summary for a recently completed workout.
+- [ ] Verify Duration matches timer from player.
+- [ ] Verify Total Volume matches sum of (reps * weight) for all completed sets.
+- [ ] Verify Best Set logic picks the set with highest (reps * weight) or (weight).
+- [ ] Click "Done" and verify navigation to History tab.
 
 ## Artifact 11 — Evidence Checklist
-- **EVID-P0.5-WorkoutPlayer-001**: Screenshot: Set logging UI.
-- **EVID-P0.5-WorkoutPlayer-002**: Screenshot: Rest timer overlay.
-- **EVID-P0.5-WorkoutPlayer-003**: Video: Complete flow from Start to Summary.
+- **EVID-P0.5-WorkoutSummary-001**: Screenshot: Full summary with tiles and recap.
+- **EVID-P0.5-WorkoutSummary-002**: Screenshot: Loading and Error states.
 
 ## Acceptance Criteria
-- Seamless resume on app restart.
-- Timer tracking accurate while screen is active.
-- Rest timer gating between sets/exercises.
-- Summary correctly aggregates all logged data.
+- Displays accurate duration, sets, and volume.
+- Groups recap by exercise name.
+- Highlights a "Best Set" for each exercise.
+- Navigation buttons work as described.
+- Handles guest sessions correctly (persistent in Mock repo).

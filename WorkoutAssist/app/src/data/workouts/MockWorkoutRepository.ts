@@ -149,6 +149,27 @@ export class MockWorkoutRepository implements IWorkoutRepository {
         return [];
     }
 
+    async getWorkout(uid: string, workoutId: string): Promise<InProgressWorkout | null> {
+        const key = `${DATA_PREFIX}${uid}_history_details`;
+        if (this.memCache.has(key)) {
+            const details = this.memCache.get(key);
+            return details[workoutId] || null;
+        }
+
+        const stored = await AsyncStorage.getItem(key);
+        if (stored) {
+            const details = JSON.parse(stored);
+            this.memCache.set(key, details);
+            return details[workoutId] || null;
+        }
+        return null;
+    }
+
+    async listWorkoutSets(uid: string, workoutId: string): Promise<WorkoutSessionSet[]> {
+        const workout = await this.getWorkout(uid, workoutId);
+        return workout ? workout.sets : [];
+    }
+
     async saveWorkoutSession(uid: string, session: WorkoutLog): Promise<void> {
         const history = await this.getHistory(uid);
         history.push(session);
@@ -224,7 +245,10 @@ export class MockWorkoutRepository implements IWorkoutRepository {
         if (!workout || workout.id !== workoutId) return;
 
         // 1. Move to history
-        const durationSeconds = Math.floor((new Date().getTime() - new Date(workout.startedAt).getTime()) / 1000);
+        // Use pausedElapsedSeconds if available (accurate frozen time), otherwise calculate from startedAt
+        const durationSeconds = workout.pausedElapsedSeconds !== undefined
+            ? workout.pausedElapsedSeconds
+            : Math.floor((new Date().getTime() - new Date(workout.startedAt).getTime()) / 1000);
 
         // Volume calculation
         const totalVolume = workout.sets.reduce((sum, set) => {
@@ -244,7 +268,20 @@ export class MockWorkoutRepository implements IWorkoutRepository {
 
         await this.saveWorkoutSession(uid, log);
 
-        // 2. Clear in progress
+        // 2. Clear in progress and save details to history
+        // Store the final duration in the detailed object for recap
+        const updatedWorkout: InProgressWorkout = {
+            ...workout,
+            status: 'completed',
+            pausedElapsedSeconds: durationSeconds
+        };
+        const dKey = `${DATA_PREFIX}${uid}_history_details`;
+        const dStored = await AsyncStorage.getItem(dKey);
+        const d = dStored ? JSON.parse(dStored) : {};
+        d[workoutId] = updatedWorkout;
+        await AsyncStorage.setItem(dKey, JSON.stringify(d));
+        this.memCache.set(dKey, d);
+
         const key = `${DATA_PREFIX}${uid}_in_progress`;
         await AsyncStorage.removeItem(key);
         this.memCache.delete(key);
