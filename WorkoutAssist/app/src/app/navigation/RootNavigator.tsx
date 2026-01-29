@@ -74,12 +74,6 @@ const MainNavigator = () => (
             <MainStack.Screen name="NotificationPrefs" component={NotificationPrefsScreen} />
         </MainStack.Group>
 
-        {/* Full Screen Modals */}
-        <MainStack.Group screenOptions={{ presentation: 'fullScreenModal', headerShown: false }}>
-            <MainStack.Screen name="WorkoutPlayer" component={WorkoutPlayerScreen} />
-            <MainStack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} />
-            <MainStack.Screen name="Paywall" component={PaywallScreen} />
-        </MainStack.Group>
     </MainStack.Navigator>
 );
 
@@ -100,7 +94,12 @@ export const RootNavigator = () => {
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 {uid ? (
-                    <Stack.Screen name="App" component={MainNavigator} />
+                    <>
+                        <Stack.Screen name="Main" component={MainNavigator} />
+                        <Stack.Screen name="WorkoutPlayer" component={WorkoutPlayerScreen} />
+                        <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} />
+                        <Stack.Screen name="Paywall" component={PaywallScreen} />
+                    </>
                 ) : (
                     <Stack.Screen name="Auth" component={AuthNavigator} />
                 )}

@@ -25,8 +25,8 @@ export type MainStackParamList = {
     // Catalog
     ExerciseDetail: undefined;
     // Workout
-    WorkoutPlayer: undefined;
-    WorkoutSummary: undefined;
+    WorkoutPlayer: { planId?: string };
+    WorkoutSummary: { workoutId: string };
     // History
     WorkoutDetail: undefined;
     ProgressDashboard: undefined;

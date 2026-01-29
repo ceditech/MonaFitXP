@@ -68,6 +68,31 @@ export interface UserPlan {
   active: boolean;
 }
 
+export interface WorkoutSessionSet {
+  exerciseId: string;
+  setIndex: number;
+  targetReps: number;
+  targetWeight?: number;
+  actualReps?: number;
+  actualWeight?: number;
+  rpe?: number;
+  completedAt?: string;
+}
+
+export interface InProgressWorkout {
+  id: string;
+  planId?: string;
+  name: string;
+  startedAt: string;
+  status: 'in_progress' | 'completed' | 'abandoned';
+  cursor: {
+    exerciseIndex: number;
+    setIndex: number;
+  };
+  sets: WorkoutSessionSet[];
+  pausedElapsedSeconds?: number; // When paused, stores the elapsed time
+}
+
 export interface IWorkoutRepository {
   // Catalogs
   getExercises(): Promise<Exercise[]>;
@@ -82,9 +107,18 @@ export interface IWorkoutRepository {
   getActivePlan(uid: string): Promise<UserPlan | null>;
   createUserPlan(uid: string, plan: Omit<UserPlan, 'id'>): Promise<string>;
   activatePlan(uid: string, planId: string): Promise<void>;
-  saveActivePlan(uid: string, plan: any): Promise<void>; // Keep for backward compatibility if needed
+  saveActivePlan(uid: string, plan: any): Promise<void>;
 
   // Workout Execution
+  startWorkout(uid: string, workout: Omit<InProgressWorkout, 'id'>): Promise<string>;
+  getInProgressWorkout(uid: string): Promise<InProgressWorkout | null>;
+  updateInProgressWorkout(uid: string, workout: InProgressWorkout): Promise<void>;
+  logSet(uid: string, workoutId: string, set: WorkoutSessionSet): Promise<void>;
+  updateWorkoutCursor(uid: string, workoutId: string, cursor: { exerciseIndex: number; setIndex: number }): Promise<void>;
+  completeWorkout(uid: string, workoutId: string): Promise<void>;
+  abandonWorkout(uid: string, workoutId: string): Promise<void>;
+
+  // History
   getHistory(uid: string): Promise<WorkoutLog[]>;
   saveWorkoutSession(uid: string, session: WorkoutLog): Promise<void>;
 

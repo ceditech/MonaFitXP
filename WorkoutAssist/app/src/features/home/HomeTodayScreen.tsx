@@ -116,7 +116,10 @@ export const HomeTodayScreen = ({ navigation }: any) => {
                     {activePlan ? (
                         <TouchableOpacity
                             style={styles.heroCard}
-                            onPress={() => navigation.navigate('WorkoutPlayer', { planId: activePlan.id })}
+                            onPress={() => {
+                                console.log('[HomeTodayScreen] Navigating to WorkoutPlayer', { planId: activePlan.templateId });
+                                navigation.navigate('WorkoutPlayer', { planId: activePlan.templateId });
+                            }}
                             activeOpacity={0.9}
                         >
                             <View style={styles.heroTag}>

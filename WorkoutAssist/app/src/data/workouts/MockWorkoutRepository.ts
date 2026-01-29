@@ -8,7 +8,9 @@ import {
     PlanTemplate,
     UserProfile,
     WorkoutLog,
-    UserPlan
+    UserPlan,
+    InProgressWorkout,
+    WorkoutSessionSet
 } from '../contracts/IWorkoutRepository';
 
 import exerciseCatalog from '../mocks/exerciseCatalog.json';
@@ -154,6 +156,111 @@ export class MockWorkoutRepository implements IWorkoutRepository {
         const key = `${DATA_PREFIX}${uid}_history`;
         this.memCache.set(key, history);
         await AsyncStorage.setItem(key, JSON.stringify(history));
+    }
+
+    // --- Workout Execution ---
+    async startWorkout(uid: string, workout: Omit<InProgressWorkout, 'id'>): Promise<string> {
+        const key = `${DATA_PREFIX}${uid}_in_progress`;
+        const id = `wo_${Math.random().toString(36).substr(2, 9)}`;
+        const newWorkout: InProgressWorkout = { ...workout, id };
+
+        await AsyncStorage.setItem(key, JSON.stringify(newWorkout));
+        this.memCache.set(key, newWorkout);
+        return id;
+    }
+
+    async getInProgressWorkout(uid: string): Promise<InProgressWorkout | null> {
+        const key = `${DATA_PREFIX}${uid}_in_progress`;
+        if (this.memCache.has(key)) return this.memCache.get(key);
+
+        const stored = await AsyncStorage.getItem(key);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            this.memCache.set(key, parsed);
+            return parsed;
+        }
+        return null;
+    }
+
+    async updateInProgressWorkout(uid: string, workout: InProgressWorkout): Promise<void> {
+        const key = `${DATA_PREFIX}${uid}_in_progress`;
+        await AsyncStorage.setItem(key, JSON.stringify(workout));
+        this.memCache.set(key, workout);
+    }
+
+    async logSet(uid: string, workoutId: string, set: WorkoutSessionSet): Promise<void> {
+        const workout = await this.getInProgressWorkout(uid);
+        if (!workout || workout.id !== workoutId) return;
+
+        // Correctly typed update
+        const existingSetIndex = workout.sets.findIndex(
+            s => s.exerciseId === set.exerciseId && s.setIndex === set.setIndex
+        );
+
+        if (existingSetIndex >= 0) {
+            workout.sets[existingSetIndex] = { ...workout.sets[existingSetIndex], ...set };
+        } else {
+            workout.sets.push(set);
+        }
+
+        const key = `${DATA_PREFIX}${uid}_in_progress`;
+        await AsyncStorage.setItem(key, JSON.stringify(workout));
+        this.memCache.set(key, workout);
+    }
+
+    async updateWorkoutCursor(uid: string, workoutId: string, cursor: { exerciseIndex: number; setIndex: number }): Promise<void> {
+        const workout = await this.getInProgressWorkout(uid);
+        if (!workout || workout.id !== workoutId) return;
+
+        workout.cursor = cursor;
+
+        const key = `${DATA_PREFIX}${uid}_in_progress`;
+        await AsyncStorage.setItem(key, JSON.stringify(workout));
+        this.memCache.set(key, workout);
+    }
+
+    async completeWorkout(uid: string, workoutId: string): Promise<void> {
+        const workout = await this.getInProgressWorkout(uid);
+        if (!workout || workout.id !== workoutId) return;
+
+        // 1. Move to history
+        const durationSeconds = Math.floor((new Date().getTime() - new Date(workout.startedAt).getTime()) / 1000);
+
+        // Volume calculation
+        const totalVolume = workout.sets.reduce((sum, set) => {
+            if (set.actualWeight && set.actualReps) {
+                return sum + (set.actualWeight * set.actualReps);
+            }
+            return sum;
+        }, 0);
+
+        const log: WorkoutLog = {
+            id: workout.id,
+            date: new Date().toISOString(),
+            templateId: workout.planId,
+            durationSeconds,
+            totalVolume
+        };
+
+        await this.saveWorkoutSession(uid, log);
+
+        // 2. Clear in progress
+        const key = `${DATA_PREFIX}${uid}_in_progress`;
+        await AsyncStorage.removeItem(key);
+        this.memCache.delete(key);
+
+        // Update metrics (mock)
+        const mKey = `${DATA_PREFIX}${uid}_metrics`;
+        const mStored = await AsyncStorage.getItem(mKey);
+        const m = mStored ? JSON.parse(mStored) : { streakDays: 0, workoutsCompleted: 0 };
+        m.workoutsCompleted += 1;
+        await AsyncStorage.setItem(mKey, JSON.stringify(m));
+    }
+
+    async abandonWorkout(uid: string, workoutId: string): Promise<void> {
+        const key = `${DATA_PREFIX}${uid}_in_progress`;
+        await AsyncStorage.removeItem(key);
+        this.memCache.delete(key);
     }
 
     // --- Metrics ---
