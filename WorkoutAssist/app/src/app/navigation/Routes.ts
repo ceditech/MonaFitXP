@@ -7,7 +7,6 @@ export type AuthStackParamList = {
     Welcome: undefined;
     SignIn: undefined;
     SignUp: undefined;
-    OnboardingWizard: undefined;
 };
 
 export type MainTabParamList = {
@@ -18,6 +17,7 @@ export type MainTabParamList = {
 };
 
 export type MainStackParamList = {
+    OnboardingWizard: undefined;
     MainTabs: NavigatorScreenParams<MainTabParamList>;
     // Plans
     PlanTemplateDetail: undefined;

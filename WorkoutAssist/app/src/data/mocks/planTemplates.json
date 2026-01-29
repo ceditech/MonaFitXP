@@ -1,8 +1,15 @@
 [
     {
         "id": "tpl_001",
-        "name": "Full Body A",
+        "name": "Full Body Foundation",
         "difficulty": "Beginner",
+        "daysPerWeek": 3,
+        "isPremium": false,
+        "shortDescription": "Perfect for starting your journey with essential movements.",
+        "equipment": [
+            "Dumbbells",
+            "Bench"
+        ],
         "blocks": [
             {
                 "exerciseId": "ex_001",
@@ -23,8 +30,15 @@
     },
     {
         "id": "tpl_002",
-        "name": "Upper Power",
+        "name": "Upper Body Power",
         "difficulty": "Intermediate",
+        "daysPerWeek": 4,
+        "isPremium": true,
+        "shortDescription": "High-intensity sessions focused on force production and speed.",
+        "equipment": [
+            "Barbell",
+            "Rack"
+        ],
         "blocks": [
             {
                 "exerciseId": "ex_002",
@@ -45,8 +59,15 @@
     },
     {
         "id": "tpl_003",
-        "name": "Lower Hypertrophy",
+        "name": "Leg Day Protocol",
         "difficulty": "Intermediate",
+        "daysPerWeek": 3,
+        "isPremium": false,
+        "shortDescription": "Build lower body strength and resilience with this focused plan.",
+        "equipment": [
+            "Barbell",
+            "Leg Press"
+        ],
         "blocks": [
             {
                 "exerciseId": "ex_001",
@@ -62,6 +83,34 @@
                 "exerciseId": "ex_007",
                 "sets": 3,
                 "reps": 12
+            }
+        ]
+    },
+    {
+        "id": "tpl_004",
+        "name": "Elite Hypertrophy",
+        "difficulty": "Advanced",
+        "daysPerWeek": 5,
+        "isPremium": true,
+        "shortDescription": "Maximum muscle growth via advanced volume and frequency.",
+        "equipment": [
+            "Full Gym"
+        ],
+        "blocks": [
+            {
+                "exerciseId": "ex_001",
+                "sets": 4,
+                "reps": 12
+            },
+            {
+                "exerciseId": "ex_002",
+                "sets": 4,
+                "reps": 12
+            },
+            {
+                "exerciseId": "ex_003",
+                "sets": 4,
+                "reps": 15
             }
         ]
     }

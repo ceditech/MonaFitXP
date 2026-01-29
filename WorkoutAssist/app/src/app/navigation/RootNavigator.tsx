@@ -43,7 +43,6 @@ const AuthNavigator = () => (
         <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
         <AuthStack.Screen name="SignIn" component={SignInScreen} />
         <AuthStack.Screen name="SignUp" component={SignUpScreen} />
-        <AuthStack.Screen name="OnboardingWizard" component={OnboardingWizard} />
     </AuthStack.Navigator>
 );
 
@@ -61,6 +60,7 @@ const TabNavigator = () => (
 
 const MainNavigator = () => (
     <MainStack.Navigator screenOptions={{ headerShown: false }}>
+        <MainStack.Screen name="OnboardingWizard" component={OnboardingWizard} />
         <MainStack.Screen name="MainTabs" component={TabNavigator} />
 
         {/* Modals & Details usually show header */}
@@ -86,6 +86,7 @@ const MainNavigator = () => (
 export const RootNavigator = () => {
     const { session } = useSession();
     const { uid, isLoading } = session;
+    console.log('[RootNavigator] rendering, uid:', uid, 'OnboardingWizard defined:', !!OnboardingWizard);
 
     if (isLoading) {
         return (

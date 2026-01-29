@@ -32,20 +32,26 @@ export class MockWorkoutRepository implements IWorkoutRepository {
     // --- User Profile ---
     async getUserProfile(uid: string): Promise<UserProfile | null> {
         const key = `${DATA_PREFIX}${uid}_profile`;
+        console.log('[MockRepo] getUserProfile key:', key);
         // Try memory
-        if (this.memCache.has(key)) return this.memCache.get(key);
+        if (this.memCache.has(key)) {
+            console.log('[MockRepo] found in memCache');
+            return this.memCache.get(key);
+        }
 
         // Try storage
         try {
             const stored = await AsyncStorage.getItem(key);
+            console.log('[MockRepo] storage item:', stored);
             if (stored) {
                 const parsed = JSON.parse(stored);
                 this.memCache.set(key, parsed);
                 return parsed;
             }
         } catch (e) {
-            console.warn('Failed to load profile', e);
+            console.warn('[MockRepo] Failed to load profile', e);
         }
+        console.log('[MockRepo] profile not found');
         return null;
     }
 
