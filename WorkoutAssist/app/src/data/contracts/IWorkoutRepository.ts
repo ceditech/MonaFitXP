@@ -45,6 +45,14 @@ export interface UserProfile {
   sessionMinutes?: number;
   timezone?: string;
   onboardingCompleted?: boolean;
+
+  // Notification Preferences
+  notificationPrefs?: {
+    remindersEnabled: boolean;
+    reminderTime: string; // "HH:mm"
+    reminderDays: string[]; // ["Mon", "Tue", ...]
+  };
+
   updatedAt?: string;
 }
 
@@ -95,9 +103,24 @@ export interface InProgressWorkout {
   pausedElapsedSeconds?: number; // When paused, stores the elapsed time
 }
 
+export interface PersonalRecord {
+  exerciseId: string;
+  bestWeight?: number;
+  bestReps?: number;
+  achievedAt: string;
+}
+
+export interface UserMetrics {
+  streakDays: number;
+  workoutsThisWeek: number;
+  weeklyVolume: number;
+  prs: PersonalRecord[];
+}
+
 export interface IWorkoutRepository {
   // Catalogs
   getExercises(): Promise<Exercise[]>;
+  getExercise(id: string): Promise<Exercise | null>;
   getPlanTemplates(): Promise<PlanTemplate[]>;
   getPlanTemplate(id: string): Promise<PlanTemplate | null>;
 
@@ -128,5 +151,5 @@ export interface IWorkoutRepository {
   saveWorkoutSession(uid: string, session: WorkoutLog): Promise<void>;
 
   // Metrics
-  getMetrics(uid: string): Promise<any>;
+  getMetrics(uid: string): Promise<UserMetrics>;
 }

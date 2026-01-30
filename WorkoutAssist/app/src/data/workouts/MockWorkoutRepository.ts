@@ -10,7 +10,9 @@ import {
     WorkoutLog,
     UserPlan,
     InProgressWorkout,
-    WorkoutSessionSet
+    WorkoutSessionSet,
+    UserMetrics,
+    PersonalRecord
 } from '../contracts/IWorkoutRepository';
 
 import exerciseCatalog from '../mocks/exerciseCatalog.json';
@@ -323,10 +325,18 @@ export class MockWorkoutRepository implements IWorkoutRepository {
 
         // Update metrics (mock)
         const mKey = `${DATA_PREFIX}${uid}_metrics`;
-        const mStored = await AsyncStorage.getItem(mKey);
-        const m = mStored ? JSON.parse(mStored) : { streakDays: 0, workoutsCompleted: 0 };
-        m.workoutsCompleted += 1;
-        await AsyncStorage.setItem(mKey, JSON.stringify(m));
+        const currentMetrics = await this.getMetrics(uid);
+
+        const updatedMetrics: UserMetrics = {
+            ...currentMetrics,
+            workoutsThisWeek: currentMetrics.workoutsThisWeek + 1,
+            weeklyVolume: currentMetrics.weeklyVolume + totalVolume,
+            // Simple logic: if volume > current PR volume for an exercise, update it (very simplified)
+            // PR update logic would go here in a real implementation
+        };
+
+        await AsyncStorage.setItem(mKey, JSON.stringify(updatedMetrics));
+        this.memCache.set(mKey, updatedMetrics);
     }
 
     async abandonWorkout(uid: string, workoutId: string): Promise<void> {
@@ -335,9 +345,42 @@ export class MockWorkoutRepository implements IWorkoutRepository {
         this.memCache.delete(key);
     }
 
-    // --- Metrics ---
-    async getMetrics(uid: string): Promise<any> {
-        // Return mock metrics for now, or aggregate from history
-        return metricsMock;
+    async getMetrics(uid: string): Promise<UserMetrics> {
+        const key = `${DATA_PREFIX}${uid}_metrics`;
+        const stored = await AsyncStorage.getItem(key);
+
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                if (parsed && parsed.prs && Array.isArray(parsed.prs)) {
+                    return parsed;
+                }
+            } catch (e) {
+                console.error('[MockWorkoutRepository] Metrics parse error:', e);
+            }
+        }
+
+        // Default mock metrics if none stored or invalid
+        const defaultMetrics: UserMetrics = {
+            streakDays: metricsMock.streakDays || 3,
+            workoutsThisWeek: 2,
+            weeklyVolume: metricsMock.totalVolumeKg || 5400,
+            prs: [
+                {
+                    exerciseId: 'ex_001', // Bench Press
+                    bestWeight: 100,
+                    bestReps: 5,
+                    achievedAt: new Date(Date.now() - 86400000 * 2).toISOString()
+                },
+                {
+                    exerciseId: 'ex_002', // Barbell Squat
+                    bestWeight: 140,
+                    bestReps: 3,
+                    achievedAt: new Date(Date.now() - 86400000 * 5).toISOString()
+                }
+            ]
+        };
+
+        return defaultMetrics;
     }
 }

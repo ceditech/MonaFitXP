@@ -13,6 +13,7 @@ import { Colors } from '../../shared/ui/Theme';
 import { useWorkoutRepo } from '../../repositories';
 import { useSession } from '../../session/SessionProvider';
 import { InProgressWorkout } from '../../data/contracts/IWorkoutRepository';
+import { Ionicons } from '@expo/vector-icons';
 
 export const WorkoutHistoryScreen = ({ navigation }: any) => {
     const { session } = useSession();
@@ -112,6 +113,13 @@ export const WorkoutHistoryScreen = ({ navigation }: any) => {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>History</Text>
+                <TouchableOpacity
+                    style={styles.progressBtn}
+                    onPress={() => navigation.navigate('ProgressDashboard')}
+                >
+                    <Ionicons name="trending-up" size={20} color={Colors.primary} />
+                    <Text style={styles.progressBtnText}>Progress</Text>
+                </TouchableOpacity>
             </View>
 
             <FlatList
@@ -153,6 +161,25 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(255,255,255,0.05)',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    progressBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    progressBtnText: {
+        color: Colors.primary,
+        fontSize: 13,
+        fontWeight: '600',
+        marginLeft: 6,
     },
     headerTitle: {
         color: '#fff',

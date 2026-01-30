@@ -17,3 +17,9 @@
 - [x] Execution: Build sets table with target/actual metrics
 - [x] Verification: Browser testing of workout details
 - [x] Finalize: Update delivery artifacts and walkthrough
+- [/] Planning: Design Artifacts 1-11 for ProgressDashboardScreen
+- [ ] Execution: Implement ProgressDashboardScreen.tsx
+- [ ] Execution: Implement KPI cards (Streak, Workouts, Volume)
+- [ ] Execution: Implement PR list with exercise mapping
+- [ ] Verification: Browser testing of ProgressDashboard
+- [ ] Finalize: Update delivery artifacts and walkthrough
