@@ -10,9 +10,13 @@
 - [x] Implement `ExerciseCatalogScreen.tsx` with debounced search
 - [x] Implement muscle and equipment filtering logic
 - [x] Optimize list rendering (memoization)
+- [x] Implement `ExerciseDetailScreen.tsx` (Header, Media, Info, Instructions)
+- [x] Handle instruction formatting (array vs string)
+- [x] Implement Analytics for detail view
 
 ## Verification
 - [x] Browser testing: Search responsiveness
 - [x] Browser testing: Filter combinations
 - [x] Browser testing: Navigation to ExerciseDetail
+- [x] Browser testing: Detail view content and formatting
 - [x] Finalize delivery artifacts and walkthrough

@@ -6,8 +6,9 @@ Implementation of a robust, searchable exercise library with muscle and equipmen
 - [x] Implementation of `ExerciseCatalogScreen`.
 - [x] Integrated debounced search (350ms).
 - [x] Added muscle group and equipment filtering.
-- [x] Connected to `ExerciseDetailScreen` for library exploration.
-- [x] Added analytics event logging for catalog interactions.
+- [x] Implementation of `ExerciseDetailScreen` with instructions and media placeholders.
+- [x] Connected list items to detailed library exploration.
+- [x] Added analytics event logging for catalog & detail interactions.
 
 ## Evidence
 ![Full Exercise Catalog](file:///C:/Users/CedricYovodevi/.gemini/antigravity/brain/b9b2df6f-a3be-43a9-9b49-857959426edd/full_catalog_view_1769740493117.png)
@@ -18,6 +19,12 @@ Implementation of a robust, searchable exercise library with muscle and equipmen
 
 ![Empty State](file:///C:/Users/CedricYovodevi/.gemini/antigravity/brain/b9b2df6f-a3be-43a9-9b49-857959426edd/empty_state_view_1769740570986.png)
 *Figure 3: Empty state when no exercises match the criteria.*
+
+![Barbell Squat Detail](file:///C:/Users/CedricYovodevi/.gemini/antigravity/brain/b9b2df6f-a3be-43a9-9b49-857959426edd/barbell_squat_detail_content_1769741592794.png)
+*Figure 4: Detail view for Barbell Squat showing badges, chips, and instructions.*
+
+![Exercise Library](file:///C:/Users/CedricYovodevi/.gemini/antigravity/brain/b9b2df6f-a3be-43a9-9b49-857959426edd/exercise_catalog_view_1769741575571.png)
+*Figure 5: Verification of icons rendering correctly in the library view.*
 
 ## Verification Results
 - [x] **Search**: Verified debounced search (350ms) correctly filters by name.
