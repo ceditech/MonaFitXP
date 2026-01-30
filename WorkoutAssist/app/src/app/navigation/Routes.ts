@@ -23,12 +23,12 @@ export type MainStackParamList = {
     PlanTemplateDetail: undefined;
     CreatePlan: undefined;
     // Catalog
-    ExerciseDetail: undefined;
+    ExerciseDetail: { exerciseId: string };
     // Workout
     WorkoutPlayer: { planId?: string };
     WorkoutSummary: { workoutId: string };
     // History
-    WorkoutDetail: undefined;
+    WorkoutDetail: { workoutId: string };
     ProgressDashboard: undefined;
     // Settings
     Settings: undefined;

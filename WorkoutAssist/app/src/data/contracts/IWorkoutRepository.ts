@@ -6,7 +6,9 @@ export interface Exercise {
   name: string;
   muscles: string[];
   type: 'weight' | 'cardio' | 'bodyweight';
-  equipment: string;
+  equipment: string[];
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  instructions?: string[];
 }
 
 export interface PlanTemplateBlock {

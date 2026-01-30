@@ -2,141 +2,254 @@
   {
     "id": "ex_001",
     "name": "Barbell Squat",
-    "muscles": ["Quads", "Glutes"],
+    "muscles": [
+      "Quads",
+      "Glutes"
+    ],
     "type": "weight",
-    "equipment": "barbell"
+    "equipment": [
+      "barbell"
+    ],
+    "difficulty": "intermediate",
+    "instructions": [
+      "Place barbell on traps",
+      "Squat down until thighs are parallel",
+      "Drive back up"
+    ]
   },
   {
     "id": "ex_002",
     "name": "Bench Press",
-    "muscles": ["Chest", "Triceps"],
+    "muscles": [
+      "Chest",
+      "Triceps"
+    ],
     "type": "weight",
-    "equipment": "barbell"
+    "equipment": [
+      "barbell"
+    ],
+    "difficulty": "intermediate"
   },
   {
     "id": "ex_003",
     "name": "Deadlift",
-    "muscles": ["Back", "Hamstrings"],
+    "muscles": [
+      "Back",
+      "Hamstrings"
+    ],
     "type": "weight",
-    "equipment": "barbell"
+    "equipment": [
+      "barbell"
+    ],
+    "difficulty": "advanced"
   },
   {
     "id": "ex_004",
     "name": "Overhead Press",
-    "muscles": ["Shoulders"],
+    "muscles": [
+      "Shoulders"
+    ],
     "type": "weight",
-    "equipment": "barbell"
+    "equipment": [
+      "barbell"
+    ],
+    "difficulty": "intermediate"
   },
   {
     "id": "ex_005",
     "name": "Pull Up",
-    "muscles": ["Back", "Biceps"],
+    "muscles": [
+      "Back",
+      "Biceps"
+    ],
     "type": "bodyweight",
-    "equipment": "pull_up_bar"
+    "equipment": [
+      "pull_up_bar"
+    ],
+    "difficulty": "intermediate"
   },
   {
     "id": "ex_006",
     "name": "Dumbbell Row",
-    "muscles": ["Back", "Biceps"],
+    "muscles": [
+      "Back",
+      "Biceps"
+    ],
     "type": "weight",
-    "equipment": "dumbbell"
+    "equipment": [
+      "dumbbell"
+    ],
+    "difficulty": "beginner"
   },
   {
     "id": "ex_007",
     "name": "Lunge",
-    "muscles": ["Quads", "Glutes"],
+    "muscles": [
+      "Quads",
+      "Glutes"
+    ],
     "type": "bodyweight",
-    "equipment": "none"
+    "equipment": [
+      "none"
+    ],
+    "difficulty": "beginner"
   },
   {
     "id": "ex_008",
     "name": "Push Up",
-    "muscles": ["Chest", "Triceps"],
+    "muscles": [
+      "Chest",
+      "Triceps"
+    ],
     "type": "bodyweight",
-    "equipment": "none"
+    "equipment": [
+      "none"
+    ],
+    "difficulty": "beginner"
   },
   {
     "id": "ex_009",
     "name": "Plank",
-    "muscles": ["Core"],
+    "muscles": [
+      "Core"
+    ],
     "type": "bodyweight",
-    "equipment": "none"
+    "equipment": [
+      "none"
+    ],
+    "difficulty": "beginner"
   },
   {
     "id": "ex_010",
     "name": "Bicep Curl",
-    "muscles": ["Biceps"],
+    "muscles": [
+      "Biceps"
+    ],
     "type": "weight",
-    "equipment": "dumbbell"
+    "equipment": [
+      "dumbbell"
+    ],
+    "difficulty": "beginner"
   },
-    {
+  {
     "id": "ex_011",
     "name": "Tricep Extension",
-    "muscles": ["Triceps"],
+    "muscles": [
+      "Triceps"
+    ],
     "type": "weight",
-    "equipment": "cable"
+    "equipment": [
+      "cable"
+    ],
+    "difficulty": "beginner"
   },
   {
     "id": "ex_012",
     "name": "Leg Press",
-    "muscles": ["Quads"],
+    "muscles": [
+      "Quads"
+    ],
     "type": "weight",
-    "equipment": "machine"
+    "equipment": [
+      "machine"
+    ],
+    "difficulty": "beginner"
   },
   {
     "id": "ex_013",
     "name": "Lat Pulldown",
-    "muscles": ["Back"],
+    "muscles": [
+      "Back"
+    ],
     "type": "weight",
-    "equipment": "cable"
+    "equipment": [
+      "cable"
+    ],
+    "difficulty": "beginner"
   },
   {
     "id": "ex_014",
     "name": "Seated Row",
-    "muscles": ["Back"],
+    "muscles": [
+      "Back"
+    ],
     "type": "weight",
-    "equipment": "cable"
+    "equipment": [
+      "cable"
+    ],
+    "difficulty": "beginner"
   },
   {
     "id": "ex_015",
     "name": "Face Pull",
-    "muscles": ["Shoulders", "Rear Delts"],
+    "muscles": [
+      "Shoulders",
+      "Rear Delts"
+    ],
     "type": "weight",
-    "equipment": "cable"
+    "equipment": [
+      "cable"
+    ],
+    "difficulty": "beginner"
   },
   {
     "id": "ex_016",
     "name": "Calf Raise",
-    "muscles": ["Calves"],
+    "muscles": [
+      "Calves"
+    ],
     "type": "weight",
-    "equipment": "machine"
+    "equipment": [
+      "machine"
+    ],
+    "difficulty": "beginner"
   },
   {
     "id": "ex_017",
     "name": "Hamstring Curl",
-    "muscles": ["Hamstrings"],
+    "muscles": [
+      "Hamstrings"
+    ],
     "type": "weight",
-    "equipment": "machine"
+    "equipment": [
+      "machine"
+    ],
+    "difficulty": "beginner"
   },
   {
     "id": "ex_018",
     "name": "Lateral Raise",
-    "muscles": ["Shoulders"],
+    "muscles": [
+      "Shoulders"
+    ],
     "type": "weight",
-    "equipment": "dumbbell"
+    "equipment": [
+      "dumbbell"
+    ],
+    "difficulty": "beginner"
   },
   {
     "id": "ex_019",
     "name": "Box Jump",
-    "muscles": ["Legs"],
+    "muscles": [
+      "Legs"
+    ],
     "type": "cardio",
-    "equipment": "box"
+    "equipment": [
+      "box"
+    ],
+    "difficulty": "intermediate"
   },
   {
     "id": "ex_020",
     "name": "Burpee",
-    "muscles": ["Full Body"],
+    "muscles": [
+      "Full Body"
+    ],
     "type": "cardio",
-    "equipment": "none"
+    "equipment": [
+      "none"
+    ],
+    "difficulty": "intermediate"
   }
 ]

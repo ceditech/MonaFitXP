@@ -24,7 +24,12 @@ export class MockWorkoutRepository implements IWorkoutRepository {
 
     // --- Catalogs ---
     async getExercises(): Promise<Exercise[]> {
-        return exerciseCatalog as Exercise[];
+        return (exerciseCatalog as unknown) as Exercise[];
+    }
+
+    async getExercise(id: string): Promise<Exercise | null> {
+        const exercises = await this.getExercises();
+        return exercises.find(e => e.id === id) || null;
     }
 
     async getPlanTemplates(): Promise<PlanTemplate[]> {
