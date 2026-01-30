@@ -72,7 +72,7 @@ export const WorkoutHistoryScreen = ({ navigation }: any) => {
     const renderItem = ({ item }: { item: InProgressWorkout }) => (
         <TouchableOpacity
             style={styles.card}
-            onPress={() => navigation.navigate('WorkoutSummary', { workoutId: item.id })}
+            onPress={() => navigation.navigate('WorkoutDetail', { workoutId: item.id })}
         >
             <View style={styles.cardHeader}>
                 <Text style={styles.dateText}>{formatDate(item.startedAt)}</Text>
