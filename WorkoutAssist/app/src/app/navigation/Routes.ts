@@ -33,7 +33,7 @@ export type MainStackParamList = {
     // Settings
     Settings: undefined;
     NotificationPrefs: undefined;
-    Paywall: undefined;
+    Paywall: { source?: string; templateId?: string; returnTo?: string };
 };
 
 export type RootStackParamList = {
