@@ -149,6 +149,36 @@ export class MockWorkoutRepository implements IWorkoutRepository {
         return [];
     }
 
+    async listWorkouts(uid: string, options?: { status?: string; limit?: number }): Promise<InProgressWorkout[]> {
+        const key = `${DATA_PREFIX}${uid}_history_details`;
+        let details: Record<string, InProgressWorkout> = {};
+
+        if (this.memCache.has(key)) {
+            details = this.memCache.get(key);
+        } else {
+            const stored = await AsyncStorage.getItem(key);
+            if (stored) {
+                details = JSON.parse(stored);
+                this.memCache.set(key, details);
+            }
+        }
+
+        let list = Object.values(details);
+
+        if (options?.status) {
+            list = list.filter(w => w.status === options.status);
+        }
+
+        // Sort by startedAt desc
+        list.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+
+        if (options?.limit) {
+            list = list.slice(0, options.limit);
+        }
+
+        return list;
+    }
+
     async getWorkout(uid: string, workoutId: string): Promise<InProgressWorkout | null> {
         const key = `${DATA_PREFIX}${uid}_history_details`;
         if (this.memCache.has(key)) {
