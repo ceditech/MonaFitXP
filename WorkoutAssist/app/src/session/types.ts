@@ -12,5 +12,7 @@ export interface SessionState {
 export interface SessionContextValue {
     session: SessionState;
     ensureGuestSession: () => Promise<string>;
+    signInEmailPass: (email: string, password: string) => Promise<void>;
+    signUpEmailPass: (email: string, password: string) => Promise<void>;
     signOut: () => Promise<void>;
 }
