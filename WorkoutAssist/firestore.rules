@@ -1,0 +1,77 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- HELPER FUNCTIONS ---
+
+    // Check if user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Check if user is the owner of the document (by uid path segment)
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Check if user has admin claim
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.get('admin', false) == true;
+    }
+
+    // --- GLOBAL CATALOGS ---
+
+    // Exercise Catalog: Authenticated Read, Admin Write
+    match /exerciseCatalog/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Plan Templates: Authenticated Read, Admin Write
+    match /planTemplates/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // --- USER DATA ---
+
+    // User Profile: Owner R/W, Delete Denied
+    match /users/{uid} {
+      allow read, create, update: if isOwner(uid);
+      allow delete: if false; // Prevent accidental deletion
+
+      // Workouts: Owner R/W
+      match /workouts/{workoutId} {
+        allow read, write: if isOwner(uid);
+        
+        // Sets: Owner R/W
+        match /sets/{setId} {
+          allow read, write: if isOwner(uid);
+        }
+      }
+
+      // Plans: Owner R/W
+      match /plans/{planId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // Metrics: Owner Read, Server-Only Write (No Client Write)
+      match /metrics/{docId} {
+        allow read: if isOwner(uid);
+        allow write: if false; // Server-side function only
+      }
+
+      // Entitlements: Owner Read, Server-Only Write (No Client Write)
+      match /entitlements/{docId} {
+        allow read: if isOwner(uid);
+        allow write: if false; // Server-side function only
+      }
+    }
+
+    // --- DEFAULT DENY (Safety Net) ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

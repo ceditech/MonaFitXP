@@ -4,6 +4,7 @@
   "main": "index.js",
   "private": true,
   "scripts": {
+    "dev": "expo start --web",
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "lint": "eslint .",
@@ -18,8 +19,9 @@
     "@react-navigation/bottom-tabs": "^7.10.1",
     "@react-navigation/native": "^7.1.28",
     "@react-navigation/native-stack": "^7.11.0",
-    "expo": "^54.0.32",
+    "expo": "~54.0.33",
     "expo-linear-gradient": "~15.0.8",
+    "firebase": "^12.8.0",
     "lucide-react-native": "^0.563.0",
     "metro-file-map": "^0.83.3",
     "react": "19.1.0",
