@@ -1,0 +1,12 @@
+{
+    "name": "workoutassist-root",
+    "version": "1.0.0",
+    "private": true,
+    "description": "WorkoutAssist monorepo root",
+    "scripts": {
+        "seed": "node scripts/seed-firestore.js"
+    },
+    "devDependencies": {
+        "firebase-admin": "^13.0.1"
+    }
+}
