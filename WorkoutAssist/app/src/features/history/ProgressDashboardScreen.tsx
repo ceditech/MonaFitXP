@@ -122,8 +122,8 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
                     <View style={styles.statCard}>
                         <Ionicons name="barbell" size={24} color="#BA68C8" />
                         <Text style={styles.statValue}>
-                            {(metrics?.weeklyVolume || 0) > 1000
-                                ? `${((metrics?.weeklyVolume || 0) / 1000).toFixed(1)}k`
+                            {metrics?.weeklyVolume && metrics.weeklyVolume > 1000
+                                ? `${(metrics.weeklyVolume / 1000).toFixed(1)}k`
                                 : metrics?.weeklyVolume || 0}
                         </Text>
                         <Text style={styles.statLabel}>Volume</Text>
@@ -185,10 +185,11 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
                     <View style={styles.chartCard}>
                         <View style={styles.chartBody}>
                             {(metrics?.volumeHistory || []).map((day, idx) => {
-                                const maxVol = Math.max(...(metrics?.volumeHistory?.map(h => h.volume) || [1]));
-                                const height = maxVol > 0 ? (day.volume / maxVol) * 100 : 5;
+                                const volumes = metrics?.volumeHistory?.map(h => h.volume) || [0];
+                                const maxVol = Math.max(...volumes, 1);
+                                const height = (day.volume / maxVol) * 100;
 
-                                // Parse YYYY-MM-DD as local date to avoid 1-day shift
+                                // Parse YYYY-MM-DD as local date to avoid shift
                                 const [y, m, d] = day.date.split('-').map(Number);
                                 const dateObj = new Date(y, m - 1, d);
                                 const dayLabel = dateObj.toLocaleDateString(undefined, { weekday: 'short' })[0];
@@ -196,7 +197,7 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
                                 return (
                                     <View key={idx} style={styles.chartCol}>
                                         <View style={styles.barContainer}>
-                                            <View style={[styles.bar, { height: `${Math.max(height, 5)}%`, opacity: height > 10 ? 1 : 0.3 }]} />
+                                            <View style={[styles.bar, { height: `${Math.max(height, 2)}%`, opacity: height > 0 ? 1 : 0.2 }]} />
                                         </View>
                                         <Text style={styles.chartLabel}>{dayLabel}</Text>
                                     </View>
@@ -346,8 +347,8 @@ const styles = StyleSheet.create({
     },
     chartBody: {
         flexDirection: 'row',
-        height: 160,
-        alignItems: 'flex-end',
+        height: 180,
+        alignItems: 'stretch',
         justifyContent: 'space-between',
         paddingBottom: 8,
     },
