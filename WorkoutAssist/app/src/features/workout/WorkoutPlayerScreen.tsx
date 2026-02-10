@@ -22,6 +22,7 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
     const repo = useWorkoutRepo();
     const { session } = useSession();
     const uid = session?.uid;
+    console.log('[WorkoutPlayerScreen] UID:', uid, 'V_FIX_1');
 
     const [isLoading, setIsLoading] = useState(true);
     const [workout, setWorkout] = useState<InProgressWorkout | null>(null);

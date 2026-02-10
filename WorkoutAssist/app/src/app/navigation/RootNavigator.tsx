@@ -58,24 +58,30 @@ const TabNavigator = () => (
     </Tab.Navigator>
 );
 
-const MainNavigator = () => (
-    <MainStack.Navigator screenOptions={{ headerShown: false }}>
-        <MainStack.Screen name="OnboardingWizard" component={OnboardingWizard} />
-        <MainStack.Screen name="MainTabs" component={TabNavigator} />
+const MainNavigator = () => {
+    const { session } = useSession();
+    const { onboardingCompleted } = session;
 
-        {/* Modals & Details usually show header */}
-        <MainStack.Group screenOptions={{ headerShown: true }}>
-            <MainStack.Screen name="PlanTemplateDetail" component={PlanTemplateDetailScreen} />
-            <MainStack.Screen name="CreatePlan" component={CreatePlanScreen} />
-            <MainStack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} />
-            <MainStack.Screen name="WorkoutDetail" component={WorkoutDetailScreen} />
-            <MainStack.Screen name="ProgressDashboard" component={ProgressDashboardScreen} />
-            <MainStack.Screen name="Settings" component={SettingsScreen} />
-            <MainStack.Screen name="NotificationPrefs" component={NotificationPrefsScreen} />
-        </MainStack.Group>
+    return (
+        <MainStack.Navigator screenOptions={{ headerShown: false }}>
+            {!onboardingCompleted && (
+                <MainStack.Screen name="OnboardingWizard" component={OnboardingWizard} />
+            )}
+            <MainStack.Screen name="MainTabs" component={TabNavigator} />
 
-    </MainStack.Navigator>
-);
+            {/* Modals & Details usually show header */}
+            <MainStack.Group screenOptions={{ headerShown: true }}>
+                <MainStack.Screen name="PlanTemplateDetail" component={PlanTemplateDetailScreen} />
+                <MainStack.Screen name="CreatePlan" component={CreatePlanScreen} />
+                <MainStack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} />
+                <MainStack.Screen name="WorkoutDetail" component={WorkoutDetailScreen} />
+                <MainStack.Screen name="ProgressDashboard" component={ProgressDashboardScreen} />
+                <MainStack.Screen name="Settings" component={SettingsScreen} />
+                <MainStack.Screen name="NotificationPrefs" component={NotificationPrefsScreen} />
+            </MainStack.Group>
+        </MainStack.Navigator>
+    );
+};
 
 export const RootNavigator = () => {
     const { session } = useSession();

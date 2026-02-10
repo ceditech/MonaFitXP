@@ -12,6 +12,13 @@ import {
     onAuthStateChanged,
     User
 } from 'firebase/auth';
+import {
+    doc,
+    getDoc,
+    setDoc,
+    serverTimestamp
+} from 'firebase/firestore';
+import { db } from '../firebase/firebase';
 
 const SessionContext = createContext<SessionContextValue | undefined>(undefined);
 
@@ -27,10 +34,13 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
             if (user) {
                 // Authenticated user
+                const profile = await syncUserProfile(user.uid);
                 setState({
                     uid: user.uid,
                     mode: 'authenticated',
                     isLoading: false,
+                    onboardingCompleted: profile.onboardingCompleted,
+                    userProfile: profile
                 });
             } else {
                 // No authenticated user, check for guest session
@@ -41,6 +51,36 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return () => unsubscribe();
     }, []);
 
+    const syncUserProfile = async (uid: string) => {
+        const userRef = doc(db, 'users', uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+            return userSnap.data();
+        } else {
+            const defaults = {
+                uid,
+                name: 'Fitness Enthusiast',
+                onboardingCompleted: false,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            };
+            await setDoc(userRef, defaults);
+            return defaults;
+        }
+    };
+
+    const refreshProfile = async () => {
+        if (state.uid && state.mode === 'authenticated') {
+            const profile = await syncUserProfile(state.uid);
+            setState(prev => ({
+                ...prev,
+                onboardingCompleted: profile.onboardingCompleted,
+                userProfile: profile
+            }));
+        }
+    };
+
     const bootstrapGuestSession = async () => {
         try {
             const guestUid = await sessionStorage.getGuestUid();
@@ -49,6 +89,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     uid: guestUid,
                     mode: 'guest',
                     isLoading: false,
+                    onboardingCompleted: true, // Guest mode skips core onboarding
                 });
             } else {
                 setState(prev => ({ ...prev, isLoading: false }));
@@ -71,6 +112,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
             uid,
             mode: 'guest',
             isLoading: false,
+            onboardingCompleted: true
         });
 
         return uid;
@@ -118,7 +160,8 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
             ensureGuestSession,
             signInEmailPass,
             signUpEmailPass,
-            signOut
+            signOut,
+            refreshProfile
         }}>
             {children}
         </SessionContext.Provider>

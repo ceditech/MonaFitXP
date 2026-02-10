@@ -51,7 +51,7 @@ const INJURIES = [
 ];
 
 export const OnboardingWizard = ({ navigation }: any) => {
-    const { session } = useSession();
+    const { session, refreshProfile } = useSession();
     const repo = useWorkoutRepo();
 
     const [currentStep, setCurrentStep] = useState(0);
@@ -124,15 +124,38 @@ export const OnboardingWizard = ({ navigation }: any) => {
 
     const handleFinish = async () => {
         console.log('[Analytics] onboarding_completed');
+        if (!session.uid) return;
+
         setIsSaving(true);
         try {
-            await repo.saveUserProfile(session.uid!, {
+            // 1. Save User Profile
+            await repo.saveUserProfile(session.uid, {
                 ...formData,
                 onboardingCompleted: true,
-                updatedAt: new Date().toISOString()
             });
+
+            // 2. Create and Activate a default plan based on goal
+            const templates = await repo.getPlanTemplates();
+            const goalTemplate = templates.find(t => t.id.toLowerCase().includes(formData.goal || '')) || templates[0];
+
+            if (goalTemplate) {
+                const planId = await repo.createUserPlan(session.uid, {
+                    templateId: goalTemplate.id,
+                    scheduleDays: formData.preferredDays || ['Mon', 'Wed', 'Fri'],
+                    createdAt: new Date().toISOString(),
+                    active: true
+                });
+                await repo.activatePlan(session.uid, planId);
+            }
+
+            // 3. Refresh session profile to update app state and trigger RootNavigator redirect
+            await refreshProfile();
+
+            // Note: If RootNavigator redirect doesn't happen immediately, 
+            // the replacement provides a fallback.
             navigation.replace('MainTabs', { screen: 'HomeToday' });
         } catch (error) {
+            console.error('[OnboardingWizard] handleFinish failed:', error);
             Alert.alert('Error', 'Failed to complete onboarding. Please try again.');
         } finally {
             setIsSaving(false);

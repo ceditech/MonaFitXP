@@ -106,7 +106,7 @@ export const HomeTodayScreen = ({ navigation }: any) => {
                     </View>
                     <View style={styles.metricDivider} />
                     <View style={styles.metricItem}>
-                        <Text style={styles.metricVal}>{metrics?.workoutsCompleted || 0}</Text>
+                        <Text style={styles.metricVal}>{metrics?.workoutsThisWeek || 0}</Text>
                         <Text style={styles.metricLabel}>Completed</Text>
                     </View>
                 </View>
