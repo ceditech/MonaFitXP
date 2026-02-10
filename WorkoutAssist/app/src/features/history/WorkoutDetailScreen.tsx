@@ -80,7 +80,7 @@ export const WorkoutDetailScreen = ({ route, navigation }: any) => {
 
     // Group sets by exercise
     const groupedSets = useMemo(() => {
-        if (!workout) return [];
+        if (!workout || !workout.sets) return [];
 
         const groups: Record<string, { exercise: Exercise | null, sets: WorkoutSessionSet[] }> = {};
 
@@ -98,7 +98,7 @@ export const WorkoutDetailScreen = ({ route, navigation }: any) => {
     }, [workout, exercises]);
 
     const totalVolume = useMemo(() => {
-        if (!workout) return 0;
+        if (!workout || !workout.sets) return (workout as any)?.summary?.totalVolume || 0;
         return workout.sets.reduce((sum, s) => sum + ((s.actualWeight || 0) * (s.actualReps || 0)), 0);
     }, [workout]);
 
@@ -135,11 +135,17 @@ export const WorkoutDetailScreen = ({ route, navigation }: any) => {
                     <View style={styles.metricsBar}>
                         <View style={styles.metricItem}>
                             <Text style={styles.metricLabel}>Duration</Text>
-                            <Text style={styles.metricValue}>{formatDuration(workout.pausedElapsedSeconds || 0)}</Text>
+                            <Text style={styles.metricValue}>
+                                {(workout as any).summary?.durationSeconds
+                                    ? formatDuration((workout as any).summary.durationSeconds)
+                                    : formatDuration(workout.pausedElapsedSeconds || 0)}
+                            </Text>
                         </View>
                         <View style={styles.metricItem}>
                             <Text style={styles.metricLabel}>Sets</Text>
-                            <Text style={styles.metricValue}>{workout.sets.filter(s => s.completedAt).length}</Text>
+                            <Text style={styles.metricValue}>
+                                {(workout as any).summary?.totalSets ?? (workout.sets ? workout.sets.filter(s => s.completedAt).length : 0)}
+                            </Text>
                         </View>
                         <View style={styles.metricItem}>
                             <Text style={styles.metricLabel}>Volume</Text>

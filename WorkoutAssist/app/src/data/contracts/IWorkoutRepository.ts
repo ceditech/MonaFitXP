@@ -115,6 +115,7 @@ export interface UserMetrics {
   workoutsThisWeek: number;
   weeklyVolume: number;
   prs: PersonalRecord[];
+  volumeHistory?: { date: string, volume: number }[];
 }
 
 export interface IWorkoutRepository {

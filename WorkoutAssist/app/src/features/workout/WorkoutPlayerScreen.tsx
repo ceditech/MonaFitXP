@@ -102,6 +102,16 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
                 console.log('[WorkoutPlayerScreen] Finalizing active workout state');
                 setWorkout(activeWorkout);
 
+                // DEBUG: Log set count and exercise IDs
+                const setExIds = activeWorkout.sets?.map(s => s.exerciseId) || [];
+                const uniqueExIds = Array.from(new Set(setExIds));
+                console.log('[WorkoutPlayerScreen] Workout sets count:', activeWorkout.sets?.length || 0);
+                console.log('[WorkoutPlayerScreen] Unique exercise IDs:', uniqueExIds);
+
+                if (uniqueExIds.length === 0) {
+                    console.warn('[WorkoutPlayerScreen] WARNING: Workout has NO exercises/sets assigned.');
+                }
+
                 let calculatedElapsed: number;
 
                 if (activeWorkout.pausedElapsedSeconds !== undefined) {
@@ -291,7 +301,7 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
             {/* Header */}
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.workoutName}>{workout?.name}</Text>
+                    <Text style={styles.workoutName}>{workout?.name || 'Workout'}</Text>
                     <Text style={styles.timerText}>{formatTime(secondsElapsed)}</Text>
                 </View>
                 <TouchableOpacity style={styles.endBtn} onPress={handleEnd}>
@@ -299,26 +309,38 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.scroll}>
-                {/* Exercise Info */}
-                <View style={styles.exerciseHeader}>
-                    <Text style={styles.exerciseName}>{currentExercise?.name}</Text>
-                    <Text style={styles.exerciseMeta}>
-                        Exercise {currentExerciseIndex + 1} of {planExercises.length}
-                    </Text>
+            {(!workout || planExercises.length === 0) ? (
+                <View style={styles.emptyWorkoutContainer}>
+                    <Text style={styles.emptyWorkoutText}>No exercises found in this workout.</Text>
+                    <TouchableOpacity
+                        style={styles.navBtn}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Text style={styles.navBtnText}>Go Back</Text>
+                    </TouchableOpacity>
                 </View>
+            ) : (
+                <ScrollView style={styles.scroll}>
+                    {/* Exercise Info */}
+                    <View style={styles.exerciseHeader}>
+                        <Text style={styles.exerciseName}>{currentExercise?.name || 'Unknown Exercise'}</Text>
+                        <Text style={styles.exerciseMeta}>
+                            Exercise {currentExerciseIndex + 1} of {planExercises.length}
+                        </Text>
+                    </View>
 
-                {/* Sets List */}
-                <View style={styles.setsList}>
-                    {currentSets.map((set, idx) => (
-                        <SetLoggerRow
-                            key={`${set.exerciseId}-${set.setIndex}`}
-                            set={set}
-                            onLog={(reps, weight) => handleLogSet(idx, reps, weight)}
-                        />
-                    ))}
-                </View>
-            </ScrollView>
+                    {/* Sets List */}
+                    <View style={styles.setsList}>
+                        {currentSets.map((set, idx) => (
+                            <SetLoggerRow
+                                key={`${set.exerciseId}-${set.setIndex}`}
+                                set={set}
+                                onLog={(reps, weight) => handleLogSet(idx, reps, weight)}
+                            />
+                        ))}
+                    </View>
+                </ScrollView>
+            )}
 
             {/* Footer Controls */}
             <View style={styles.footer}>
@@ -635,6 +657,18 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '700',
+    },
+    emptyWorkoutContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 40,
+    },
+    emptyWorkoutText: {
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: 18,
+        textAlign: 'center',
+        marginBottom: 32,
     },
     // Modal styles
     modalOverlay: {

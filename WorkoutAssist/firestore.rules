@@ -56,6 +56,16 @@ service cloud.firestore {
         allow read, write: if isOwner(uid);
       }
 
+      // Stats & PRs: Owner R/W
+      match /stats/{docId=**} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // Workout Logs: Owner R/W
+      match /workoutLogs/{docId} {
+        allow read, write: if isOwner(uid);
+      }
+
       // Metrics: Owner Read, Server-Only Write (No Client Write)
       match /metrics/{docId} {
         allow read: if isOwner(uid);

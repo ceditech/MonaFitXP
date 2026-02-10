@@ -7,7 +7,8 @@ import { useSession } from '../../session/SessionProvider';
 import { InProgressWorkout, WorkoutSessionSet } from '../../data/contracts/IWorkoutRepository';
 
 export const WorkoutSummaryScreen = ({ route, navigation }: any) => {
-    const { workoutId } = route.params;
+    console.log('[WorkoutSummaryScreen] Mounting with params:', route.params);
+    const { workoutId } = route.params || {};
     const { session } = useSession();
     const uid = session.uid || '';
     const repo = useWorkoutRepo();
@@ -24,7 +25,12 @@ export const WorkoutSummaryScreen = ({ route, navigation }: any) => {
     };
 
     useEffect(() => {
-        loadData();
+        if (workoutId && uid) {
+            loadData();
+        } else {
+            console.warn('[WorkoutSummaryScreen] Missing workoutId or uid:', { workoutId, uid });
+            if (!workoutId) setError('Missing workout ID');
+        }
     }, [workoutId, uid]);
 
     const loadData = async () => {
@@ -59,13 +65,33 @@ export const WorkoutSummaryScreen = ({ route, navigation }: any) => {
 
     // --- Calculations ---
     const summary = useMemo(() => {
-        if (!workout) return null;
+        if (!workout) {
+            console.log('[WorkoutSummaryScreen] summary useMemo: no workout');
+            return null;
+        }
+
+        // Use pre-calculated summary if available
+        const ws = (workout as any).summary;
+
+        if (ws && !workout.sets) {
+            return {
+                durationDisplay: formatDuration(ws.durationSeconds || 0),
+                totalSets: ws.totalSets || 0,
+                totalVolume: ws.totalVolume || 0,
+                recap: [] // Can't recap without sets, but at least won't crash
+            };
+        }
+
+        if (!workout.sets) {
+            console.log('[WorkoutSummaryScreen] summary useMemo: workout.sets is missing');
+            return null;
+        }
 
         const completedSets = workout.sets.filter(s => s.completedAt);
         const totalVolume = completedSets.reduce((sum, s) => sum + ((s.actualWeight || 0) * (s.actualReps || 0)), 0);
 
-        // Final duration from pausedElapsedSeconds (set in completeWorkout)
-        const durationSeconds = workout.pausedElapsedSeconds || 0;
+        // Final duration from summary or secondsElapsed
+        const durationSeconds = ws?.durationSeconds || workout.pausedElapsedSeconds || 0;
         const durationDisplay = formatDuration(durationSeconds);
 
         // Grouping sets by exercise
@@ -94,8 +120,8 @@ export const WorkoutSummaryScreen = ({ route, navigation }: any) => {
 
         return {
             durationDisplay,
-            totalSets: completedSets.length,
-            totalVolume,
+            totalSets: ws?.totalSets ?? completedSets.length,
+            totalVolume: ws?.totalVolume ?? totalVolume,
             recap: Object.values(recap)
         };
     }, [workout, exercises]);

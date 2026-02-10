@@ -83,16 +83,22 @@ export const WorkoutHistoryScreen = ({ navigation }: any) => {
             <View style={styles.metricsRow}>
                 <View style={styles.metric}>
                     <Text style={styles.metricLabel}>Duration</Text>
-                    <Text style={styles.metricValue}>{formatDuration(item.pausedElapsedSeconds || 0)}</Text>
+                    <Text style={styles.metricValue}>
+                        {(item as any).summary?.durationSeconds
+                            ? formatDuration((item as any).summary.durationSeconds)
+                            : formatDuration(item.pausedElapsedSeconds || 0)}
+                    </Text>
                 </View>
                 <View style={styles.metric}>
                     <Text style={styles.metricLabel}>Sets</Text>
-                    <Text style={styles.metricValue}>{item.sets.filter(s => s.completedAt).length}</Text>
+                    <Text style={styles.metricValue}>
+                        {(item as any).summary?.totalSets ?? (item.sets ? item.sets.filter(s => s.completedAt).length : 0)}
+                    </Text>
                 </View>
                 <View style={styles.metric}>
                     <Text style={styles.metricLabel}>Volume</Text>
                     <Text style={styles.metricValue}>
-                        {item.sets.reduce((sum, s) => sum + ((s.actualWeight || 0) * (s.actualReps || 0)), 0)} kg
+                        {(item as any).summary?.totalVolume ?? (item.sets ? item.sets.reduce((sum, s) => sum + ((s.actualWeight || 0) * (s.actualReps || 0)), 0) : 0)} kg
                     </Text>
                 </View>
             </View>

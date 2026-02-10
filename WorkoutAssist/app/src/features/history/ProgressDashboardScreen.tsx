@@ -74,7 +74,7 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.centered}>
-                    <ActivityIndicator size="large" color={Colors.primary} />
+                    <ActivityIndicator size="large" color={Colors.brandPurple} />
                 </View>
             </SafeAreaView>
         );
@@ -98,7 +98,7 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
         <SafeAreaView style={styles.container}>
             <ScrollView
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.brandPurple} />
                 }
                 contentContainerStyle={styles.scrollContent}
             >
@@ -115,12 +115,12 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
                         <Text style={styles.statLabel}>Day Streak</Text>
                     </View>
                     <View style={styles.statCard}>
-                        <Ionicons name="calendar" size={24} color={Colors.primary} />
+                        <Ionicons name="calendar" size={24} color={Colors.brandPurple} />
                         <Text style={styles.statValue}>{metrics?.workoutsThisWeek || 0}</Text>
                         <Text style={styles.statLabel}>This Week</Text>
                     </View>
                     <View style={styles.statCard}>
-                        <Ionicons name="barbell" size={24} color="#5856D6" />
+                        <Ionicons name="barbell" size={24} color="#BA68C8" />
                         <Text style={styles.statValue}>
                             {(metrics?.weeklyVolume || 0) > 1000
                                 ? `${((metrics?.weeklyVolume || 0) / 1000).toFixed(1)}k`
@@ -133,12 +133,13 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
                 {/* PR Section */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <Ionicons name="trophy" size={20} color={Colors.primary} />
+                        <Ionicons name="trophy" size={20} color={Colors.brandPurple} />
                         <Text style={styles.sectionTitle}>Personal Records</Text>
                     </View>
 
                     {!metrics?.prs || metrics.prs.length === 0 ? (
                         <View style={styles.emptyPRContainer}>
+                            <Ionicons name="lock-closed" size={32} color="rgba(255,255,255,0.05)" />
                             <Text style={styles.emptyPRText}>Log workouts to unlock your personal records!</Text>
                         </View>
                     ) : (
@@ -154,11 +155,13 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
                                         <Text style={styles.prExerciseName}>
                                             {exercise ? exercise.name : 'Unknown Exercise'}
                                         </Text>
-                                        <Text style={styles.prDetail}>
-                                            {pr.bestWeight ? `${pr.bestWeight} kg` : ''}
-                                            {pr.bestWeight && pr.bestReps ? ' x ' : ''}
-                                            {pr.bestReps ? `${pr.bestReps} reps` : ''}
-                                        </Text>
+                                        <View style={styles.prBadge}>
+                                            <Text style={styles.prDetail}>
+                                                {pr.bestWeight ? `${pr.bestWeight} kg` : ''}
+                                                {pr.bestWeight && pr.bestReps ? ' x ' : ''}
+                                                {pr.bestReps ? `${pr.bestReps} reps` : ''}
+                                            </Text>
+                                        </View>
                                     </View>
                                     <View style={styles.prRight}>
                                         <Text style={styles.prDate}>
@@ -172,14 +175,37 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
                     )}
                 </View>
 
-                {/* Placeholder for future Charts */}
+                {/* Volume Chart */}
                 <View style={[styles.section, { marginBottom: 40 }]}>
                     <View style={styles.sectionHeader}>
-                        <Ionicons name="trending-up" size={20} color={Colors.primary} />
+                        <Ionicons name="trending-up" size={20} color={Colors.brandPurple} />
                         <Text style={styles.sectionTitle}>Volume Over Time</Text>
                     </View>
-                    <View style={styles.chartPlaceholder}>
-                        <Text style={styles.chartPlaceholderText}>Detailed charts coming soon</Text>
+
+                    <View style={styles.chartCard}>
+                        <View style={styles.chartBody}>
+                            {(metrics?.volumeHistory || []).map((day, idx) => {
+                                const maxVol = Math.max(...(metrics?.volumeHistory?.map(h => h.volume) || [1]));
+                                const height = maxVol > 0 ? (day.volume / maxVol) * 100 : 5;
+
+                                // Parse YYYY-MM-DD as local date to avoid 1-day shift
+                                const [y, m, d] = day.date.split('-').map(Number);
+                                const dateObj = new Date(y, m - 1, d);
+                                const dayLabel = dateObj.toLocaleDateString(undefined, { weekday: 'short' })[0];
+
+                                return (
+                                    <View key={idx} style={styles.chartCol}>
+                                        <View style={styles.barContainer}>
+                                            <View style={[styles.bar, { height: `${Math.max(height, 5)}%`, opacity: height > 10 ? 1 : 0.3 }]} />
+                                        </View>
+                                        <Text style={styles.chartLabel}>{dayLabel}</Text>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                        <View style={styles.chartFooter}>
+                            <Text style={styles.chartFooterText}>Last 7 Days (Total Volume per session)</Text>
+                        </View>
                     </View>
                 </View>
             </ScrollView>
@@ -275,10 +301,17 @@ const styles = StyleSheet.create({
         color: '#fff',
         marginBottom: 4,
     },
+    prBadge: {
+        backgroundColor: 'rgba(142, 36, 170, 0.15)',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 4,
+        alignSelf: 'flex-start',
+    },
     prDetail: {
         fontSize: 14,
-        color: Colors.primary,
-        fontWeight: '600',
+        color: Colors.brandPurple,
+        fontWeight: '700',
     },
     prRight: {
         flexDirection: 'row',
@@ -293,28 +326,64 @@ const styles = StyleSheet.create({
         padding: 40,
         alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.02)',
-        borderRadius: 12,
+        borderRadius: 24,
         borderStyle: 'dashed',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(255,255,255,0.08)',
     },
     emptyPRText: {
-        color: 'rgba(255,255,255,0.4)',
+        color: 'rgba(255,255,255,0.3)',
         textAlign: 'center',
         fontSize: 14,
+        marginTop: 12,
     },
-    chartPlaceholder: {
-        height: 150,
-        backgroundColor: 'rgba(255,255,255,0.02)',
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
+    chartCard: {
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderRadius: 24,
+        padding: 24,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)',
     },
-    chartPlaceholderText: {
+    chartBody: {
+        flexDirection: 'row',
+        height: 160,
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        paddingBottom: 8,
+    },
+    chartCol: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    barContainer: {
+        flex: 1,
+        width: 12,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 6,
+        overflow: 'hidden',
+        justifyContent: 'flex-end',
+    },
+    bar: {
+        width: '100%',
+        backgroundColor: Colors.brandPurple,
+        borderRadius: 6,
+    },
+    chartLabel: {
+        color: 'rgba(255,255,255,0.4)',
+        fontSize: 12,
+        fontWeight: '600',
+        marginTop: 12,
+    },
+    chartFooter: {
+        marginTop: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.05)',
+    },
+    chartFooterText: {
         color: 'rgba(255,255,255,0.3)',
-        fontSize: 14,
+        fontSize: 12,
+        textAlign: 'center',
     },
     errorText: {
         color: 'rgba(255,255,255,0.5)',
@@ -323,10 +392,10 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     retryButton: {
-        backgroundColor: Colors.primary,
+        backgroundColor: Colors.brandPurple,
         paddingHorizontal: 24,
         paddingVertical: 12,
-        borderRadius: 8,
+        borderRadius: 12,
     },
     retryText: {
         color: '#fff',

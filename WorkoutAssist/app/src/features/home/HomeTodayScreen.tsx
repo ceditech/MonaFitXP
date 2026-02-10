@@ -127,7 +127,7 @@ export const HomeTodayScreen = ({ navigation }: any) => {
                             </View>
                             <Text style={styles.heroTitle}>{activePlan.name}</Text>
                             <View style={styles.heroMeta}>
-                                <Text style={styles.heroMetaText}>🕒 {activePlan.sessionMinutes || 45}m</Text>
+                                <Text style={styles.heroMetaText}>🕒 {activePlan.sessionMinutes || profile?.sessionMinutes || 45}m</Text>
                                 <Text style={styles.heroMetaText}>⚡ {activePlan.blocks?.length || 0} Exercises</Text>
                             </View>
                             <View style={styles.heroBtn}>
