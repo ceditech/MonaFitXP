@@ -22,6 +22,7 @@ export const PlanTemplateDetailScreen = ({ route, navigation }: any) => {
     const [isLoading, setIsLoading] = useState(true);
     const [template, setTemplate] = useState<PlanTemplate | null>(null);
     const [exercises, setExercises] = useState<Record<string, Exercise>>({});
+    const [entitlement, setEntitlement] = useState<{ tier: string }>({ tier: 'free' });
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -33,9 +34,10 @@ export const PlanTemplateDetailScreen = ({ route, navigation }: any) => {
         setIsLoading(true);
         setError(null);
         try {
-            const [tpl, exList] = await Promise.all([
+            const [tpl, exList, ent] = await Promise.all([
                 repo.getPlanTemplate(templateId),
-                repo.getExercises()
+                repo.getExercises(),
+                session.uid ? repo.getEntitlement(session.uid) : Promise.resolve({ tier: 'free' })
             ]);
 
             if (!tpl) {
@@ -44,6 +46,7 @@ export const PlanTemplateDetailScreen = ({ route, navigation }: any) => {
                 setTemplate(tpl);
                 const exMap = exList.reduce((acc, ex) => ({ ...acc, [ex.id]: ex }), {});
                 setExercises(exMap);
+                setEntitlement(ent);
             }
         } catch (e) {
             console.error(e);
@@ -59,11 +62,16 @@ export const PlanTemplateDetailScreen = ({ route, navigation }: any) => {
         console.log('[Analytics] choose_plan_clicked', { templateId });
 
         // Premium Gating Logic
-        // In Guest Mode, all premium plans are gated.
         const isGuest = session?.mode === 'guest' || session?.mode === 'none';
+        const isPremiumUser = entitlement.tier !== 'free';
 
-        if (template.isPremium && isGuest) {
-            console.log('[Analytics] paywall_redirected', { templateId, source: 'premium_plan_detail' });
+        if (template.isPremium && (isGuest || !isPremiumUser)) {
+            console.log('[Analytics] paywall_redirected', {
+                templateId,
+                source: 'premium_plan_detail',
+                isGuest,
+                tier: entitlement.tier
+            });
             navigation.navigate('Paywall', { source: 'premium_template', templateId: template.id });
         } else {
             navigation.navigate('CreatePlan', { templateId: template.id });

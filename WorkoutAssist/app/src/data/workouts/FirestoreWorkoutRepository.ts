@@ -419,64 +419,43 @@ export class FirestoreWorkoutRepository implements IWorkoutRepository {
 
     async getMetrics(uid: string): Promise<UserMetrics> {
         try {
-            console.log('[FirestoreRepo] Fetching metrics for:', uid);
-            const workoutsRef = collection(db, 'users', uid, 'workouts');
-            const q = query(workoutsRef, where('status', '==', 'completed'), limit(100));
-            const snapshot = await getDocs(q);
+            console.log('[FirestoreRepo] Fetching metrics summary for:', uid);
+            const summaryRef = doc(db, 'users', uid, 'metrics', 'summary');
+            const summarySnap = await getDoc(summaryRef);
 
-            const workouts = snapshot.docs.map(d => d.data());
+            if (!summarySnap.exists()) {
+                console.log('[FirestoreRepo] No metrics summary found, using defaults');
+                return {
+                    streakDays: 0,
+                    workoutsThisWeek: 0,
+                    weeklyVolume: 0,
+                    prs: [],
+                    volumeHistory: []
+                };
+            }
 
-            // 1. Weekly Stats
-            const now = new Date();
-            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const data = summarySnap.data();
 
-            const weeklyWorkouts = workouts.filter(w => {
-                const date = this._parseDate(w.endedAt || w.startedAt);
-                return date >= oneWeekAgo;
-            });
-
-            const weeklyVolume = weeklyWorkouts.reduce((sum, w) => sum + (w.summary?.totalVolume || 0), 0);
-
-            // 2. Streak & Activity
-            const uniqueDays = new Set(workouts.map(w => {
-                const date = this._parseDate(w.endedAt || w.startedAt);
-                return this._getLocalDateStr(date);
-            }));
-
-            // 3. PRs from sub-collection
+            // Fetch PRs from the sub-collection as well (since they might be large)
+            // or if the function merged them, we can use them from data.prs
             const prsRef = collection(db, 'users', uid, 'stats', 'prs', 'exercises');
             const prsSnap = await getDocs(prsRef);
             const prs = prsSnap.docs.map(d => {
-                const data = d.data();
+                const prData = d.data();
                 return {
-                    ...data,
-                    achievedAt: this._parseDate(data.achievedAt).toISOString()
+                    ...prData,
+                    achievedAt: this._parseDate(prData.achievedAt).toISOString()
                 } as PersonalRecord;
             });
 
-            // 4. Volume History (Last 7 Local Days)
-            const volumeHistory: { date: string, volume: number }[] = [];
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
-                const dateStr = this._getLocalDateStr(d);
-
-                const dayVolume = workouts.reduce((sum, w) => {
-                    const wDate = this._getLocalDateStr(this._parseDate(w.endedAt || w.startedAt));
-                    return wDate === dateStr ? sum + (w.summary?.totalVolume || 0) : sum;
-                }, 0);
-
-                volumeHistory.push({ date: dateStr, volume: dayVolume });
-            }
-
-            console.log('[FirestoreRepo] Metrics computed. Volume History points:', volumeHistory.length);
-
+            // Note: Cloud function might not compute volumeHistory for chart in MVP.
+            // If it's not in the doc, we return an empty array or the app handles it.
             return {
-                streakDays: uniqueDays.size,
-                workoutsThisWeek: weeklyWorkouts.length,
-                weeklyVolume,
-                prs,
-                volumeHistory
+                streakDays: data.streakDays || 0,
+                workoutsThisWeek: data.workoutsThisWeek || 0,
+                weeklyVolume: data.weeklyVolume || 0,
+                prs: prs,
+                volumeHistory: data.volumeHistory || []
             };
         } catch (e) {
             console.error('[FirestoreRepo] getMetrics error:', e);
@@ -486,6 +465,20 @@ export class FirestoreWorkoutRepository implements IWorkoutRepository {
                 weeklyVolume: 0,
                 prs: []
             };
+        }
+    }
+
+    async getEntitlement(uid: string): Promise<{ tier: string }> {
+        try {
+            const docRef = doc(db, 'users', uid, 'entitlements', 'current');
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                return docSnap.data() as { tier: string };
+            }
+            return { tier: 'free' };
+        } catch (e) {
+            console.error('[FirestoreRepo] getEntitlement error:', e);
+            return { tier: 'free' };
         }
     }
 

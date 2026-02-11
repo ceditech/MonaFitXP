@@ -383,4 +383,8 @@ export class MockWorkoutRepository implements IWorkoutRepository {
 
         return defaultMetrics;
     }
+
+    async getEntitlement(uid: string): Promise<{ tier: string }> {
+        return { tier: 'free' };
+    }
 }

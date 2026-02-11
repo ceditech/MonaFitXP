@@ -151,6 +151,7 @@ export interface IWorkoutRepository {
   listWorkoutSets(uid: string, workoutId: string): Promise<WorkoutSessionSet[]>;
   saveWorkoutSession(uid: string, session: WorkoutLog): Promise<void>;
 
-  // Metrics
+  // Metrics & Entitlements
   getMetrics(uid: string): Promise<UserMetrics>;
+  getEntitlement(uid: string): Promise<{ tier: string }>;
 }
