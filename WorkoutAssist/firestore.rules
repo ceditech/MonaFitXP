@@ -72,9 +72,10 @@ service cloud.firestore {
         allow write: if false; // Server-side function only
       }
 
-      // Entitlements: Owner Read, Server-Only Write (No Client Write)
+      // Entitlements: Owner Read (get only), Server-Only Write
       match /entitlements/{docId} {
-        allow read: if isOwner(uid);
+        allow get: if isOwner(uid);
+        allow list: if false;
         allow write: if false; // Server-side function only
       }
     }

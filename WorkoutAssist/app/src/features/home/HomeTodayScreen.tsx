@@ -98,6 +98,21 @@ export const HomeTodayScreen = ({ navigation }: any) => {
                     )}
                 </View>
 
+                {session.mode === 'guest' && (
+                    <TouchableOpacity
+                        style={styles.guestBanner}
+                        onPress={() => navigation.navigate('SignUp')}
+                    >
+                        <View style={styles.guestBannerContent}>
+                            <Text style={styles.guestBannerTitle}>Unlock Full Potential 🚀</Text>
+                            <Text style={styles.guestBannerText}>Create an account to save your progress and sync across devices.</Text>
+                        </View>
+                        <View style={styles.guestBannerBtn}>
+                            <Text style={styles.guestBannerBtnText}>Sign Up</Text>
+                        </View>
+                    </TouchableOpacity>
+                )}
+
                 {/* Metrics Widget */}
                 <View style={styles.metricsRow}>
                     <View style={styles.metricItem}>
@@ -371,5 +386,41 @@ const styles = StyleSheet.create({
         color: 'rgba(255,255,255,0.3)',
         fontSize: 14,
         fontWeight: '600',
+    },
+    guestBanner: {
+        backgroundColor: 'rgba(142, 36, 170, 0.15)',
+        borderRadius: 20,
+        padding: 20,
+        marginBottom: 32,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(142, 36, 170, 0.3)',
+    },
+    guestBannerContent: {
+        flex: 1,
+        marginRight: 12,
+    },
+    guestBannerTitle: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: '700',
+        marginBottom: 4,
+    },
+    guestBannerText: {
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: 13,
+        lineHeight: 18,
+    },
+    guestBannerBtn: {
+        backgroundColor: Colors.brandPurple,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+    },
+    guestBannerBtnText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '700',
     },
 });

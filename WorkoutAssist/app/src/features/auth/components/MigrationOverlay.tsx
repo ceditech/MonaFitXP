@@ -17,8 +17,8 @@ export const MigrationOverlay: React.FC = () => {
     const [visible, setVisible] = useState(false);
     const fadeAnim = useState(new Animated.Value(0))[0];
 
-    const refreshStatus = useCallback(() => {
-        const state = GuestStore.getMigrationState();
+    const refreshStatus = useCallback(async () => {
+        const state = await GuestStore.getMigrationState();
         setStatus(state);
 
         const isVisible = state.status === 'pending' || state.status === 'failed';
@@ -34,10 +34,10 @@ export const MigrationOverlay: React.FC = () => {
 
     const runMigration = useCallback(async () => {
         if (session.mode === 'authenticated' && session.uid) {
-            const currentState = GuestStore.getMigrationState();
+            const currentState = await GuestStore.getMigrationState();
 
             // Only trigger if we have data to migrate and haven't completed/started yet
-            const workouts = GuestStore.readGuestWorkouts();
+            const workouts = await GuestStore.readGuestWorkouts();
             if (workouts.length === 0) return;
 
             if (currentState.status === 'idle' || currentState.status === 'failed') {
@@ -49,7 +49,7 @@ export const MigrationOverlay: React.FC = () => {
                 } catch (error) {
                     console.error('[MigrationOverlay] Migration triggered error', error);
                 } finally {
-                    refreshStatus();
+                    await refreshStatus();
                 }
             }
         }
@@ -60,8 +60,8 @@ export const MigrationOverlay: React.FC = () => {
         runMigration();
         refreshStatus();
 
-        // Polling as a fallback since localStorage updates might happen outside of React
-        const interval = setInterval(refreshStatus, 1500);
+        // Polling as a fallback since storage updates might happen outside of React
+        const interval = setInterval(refreshStatus, 2000);
         return () => clearInterval(interval);
     }, [runMigration, refreshStatus]);
 

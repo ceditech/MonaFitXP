@@ -1,25 +1,236 @@
 
 // app/src/features/home/SettingsScreen.tsx
 import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { PlaceholderScreen } from '../../shared/ui/PlaceholderScreen';
 import { useSession } from '../../session/SessionProvider';
+import { Colors, Spacing, Typography } from '../../shared/ui/Theme';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MainStackParamList } from '../../app/navigation/Routes';
 
 interface Props {
-    navigation: NativeStackNavigationProp<any>;
+    navigation: NativeStackNavigationProp<MainStackParamList>;
 }
 
 export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
-    const { signOut } = useSession();
+    const { session, signOut } = useSession();
+    const isGuest = session.mode === 'guest';
+
+    const renderSettingItem = (
+        title: string,
+        icon: keyof typeof Ionicons.glyphMap,
+        onPress: () => void,
+        color: string = Colors.white,
+        subtitle?: string
+    ) => (
+        <TouchableOpacity style={styles.item} onPress={onPress}>
+            <View style={[styles.iconContainer, { backgroundColor: `${color}15` }]}>
+                <Ionicons name={icon} size={22} color={color} />
+            </View>
+            <View style={styles.itemContent}>
+                <Text style={styles.itemTitle}>{title}</Text>
+                {subtitle && <Text style={styles.itemSubtitle}>{subtitle}</Text>}
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
+        </TouchableOpacity>
+    );
 
     return (
-        <PlaceholderScreen
-            title="Settings"
-            description="App configuration."
-            action={() => navigation.navigate('NotificationPrefs')}
-            actionLabel="Notification Preferences"
-            navigation={navigation}
-        />
+        <SafeAreaView style={styles.container}>
+            <ScrollView contentContainerStyle={styles.scroll}>
+                <View style={styles.header}>
+                    <Text style={styles.title}>Settings</Text>
+                </View>
+
+                {isGuest && (
+                    <View style={styles.promoCard}>
+                        <LinearGradient
+                            colors={[Colors.brandPurple, '#7B1FA2']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.promoGradient}
+                        >
+                            <View style={styles.promoContent}>
+                                <Ionicons name="cloud-upload" size={32} color="#fff" style={styles.promoIcon} />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.promoTitle}>Save Your Progress</Text>
+                                    <Text style={styles.promoText}>Create an account to sync your workouts and unlock pro features.</Text>
+                                </View>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.promoBtn}
+                                onPress={() => navigation.navigate('SignUp')}
+                            >
+                                <Text style={styles.promoBtnText}>Create Account</Text>
+                            </TouchableOpacity>
+                        </LinearGradient>
+                    </View>
+                )}
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionLabel}>ACCOUNT</Text>
+                    {renderSettingItem(
+                        'Notification Preferences',
+                        'notifications-outline',
+                        () => navigation.navigate('NotificationPrefs'),
+                        '#4FC3F7'
+                    )}
+                    {renderSettingItem(
+                        'Premium Subscription',
+                        'star-outline',
+                        () => navigation.navigate('Upgrade', { reason: 'settings' }),
+                        '#FFB74D'
+                    )}
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionLabel}>APP</Text>
+                    {renderSettingItem(
+                        'Help & Support',
+                        'help-circle-outline',
+                        () => { },
+                        '#90A4AE'
+                    )}
+                    {renderSettingItem(
+                        'Terms & Privacy',
+                        'document-text-outline',
+                        () => { },
+                        '#90A4AE'
+                    )}
+                </View>
+
+                <TouchableOpacity style={styles.logoutBtn} onPress={signOut}>
+                    <Ionicons name="log-out-outline" size={20} color="#FF5252" style={{ marginRight: 8 }} />
+                    <Text style={styles.logoutText}>{isGuest ? 'Exit Guest Mode' : 'Log Out'}</Text>
+                </TouchableOpacity>
+
+                <View style={styles.footer}>
+                    <Text style={styles.versionText}>Version 1.0.0 (Beta)</Text>
+                </View>
+            </ScrollView>
+        </SafeAreaView>
     );
-    // Add Logout button in real implementation
 };
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#0a0a1a',
+    },
+    scroll: {
+        paddingHorizontal: 20,
+        paddingBottom: 40,
+    },
+    header: {
+        marginTop: 20,
+        marginBottom: 30,
+    },
+    title: {
+        fontSize: 32,
+        fontWeight: '800',
+        color: '#fff',
+        letterSpacing: -0.5,
+    },
+    promoCard: {
+        borderRadius: 20,
+        overflow: 'hidden',
+        marginBottom: 32,
+    },
+    promoGradient: {
+        padding: 20,
+    },
+    promoContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    promoIcon: {
+        marginRight: 16,
+    },
+    promoTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#fff',
+        marginBottom: 4,
+    },
+    promoText: {
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.8)',
+        lineHeight: 18,
+    },
+    promoBtn: {
+        backgroundColor: '#fff',
+        paddingVertical: 12,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    promoBtnText: {
+        color: Colors.brandPurple,
+        fontSize: 15,
+        fontWeight: '700',
+    },
+    section: {
+        marginBottom: 32,
+    },
+    sectionLabel: {
+        fontSize: 12,
+        fontWeight: '800',
+        color: 'rgba(255,255,255,0.3)',
+        letterSpacing: 1.5,
+        marginBottom: 16,
+        marginLeft: 4,
+    },
+    item: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        padding: 14,
+        borderRadius: 16,
+        marginBottom: 10,
+    },
+    iconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    itemContent: {
+        flex: 1,
+    },
+    itemTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#fff',
+    },
+    itemSubtitle: {
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.5)',
+        marginTop: 2,
+    },
+    logoutBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255, 82, 82, 0.1)',
+        padding: 16,
+        borderRadius: 16,
+        marginTop: 10,
+    },
+    logoutText: {
+        color: '#FF5252',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    footer: {
+        marginTop: 40,
+        alignItems: 'center',
+    },
+    versionText: {
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.2)',
+        fontWeight: '500',
+    },
+});

@@ -14,6 +14,7 @@ export type MainTabParamList = {
     ExerciseCatalog: undefined;
     PlanTemplates: undefined;
     WorkoutHistory: undefined;
+    AICoach: undefined;
 };
 
 export type MainStackParamList = {
@@ -34,6 +35,9 @@ export type MainStackParamList = {
     Settings: undefined;
     NotificationPrefs: undefined;
     Paywall: { source?: string; templateId?: string; returnTo?: string };
+    Upgrade: { reason?: string };
+    AICoach: undefined;
+    SignUp: undefined;
 };
 
 export type RootStackParamList = {

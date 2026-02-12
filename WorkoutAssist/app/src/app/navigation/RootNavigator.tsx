@@ -29,9 +29,12 @@ import { ProgressDashboardScreen } from '../../features/history/ProgressDashboar
 import { SettingsScreen } from '../../features/home/SettingsScreen';
 import { NotificationPrefsScreen } from '../../features/home/NotificationPrefsScreen';
 import { PaywallScreen } from '../../features/home/PaywallScreen';
+import { UpgradeScreen } from '../../pages/UpgradeScreen';
+import { AICoachScreen } from '../../pages/AICoachScreen';
 
 import { AuthStackParamList, MainStackParamList, MainTabParamList } from './Routes';
 import { Colors } from '../../shared/ui/Theme';
+import { useEntitlement } from '../../core/entitlements/EntitlementProvider';
 
 const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -55,6 +58,7 @@ const TabNavigator = () => (
         <Tab.Screen name="PlanTemplates" component={PlanTemplatesScreen} options={{ title: 'Plans' }} />
         <Tab.Screen name="ExerciseCatalog" component={ExerciseCatalogScreen} options={{ title: 'Exercises' }} />
         <Tab.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ title: 'History' }} />
+        <Tab.Screen name="AICoach" component={AICoachScreen} options={{ title: 'AI Coach' }} />
     </Tab.Navigator>
 );
 
@@ -78,6 +82,14 @@ const MainNavigator = () => {
                 <MainStack.Screen name="ProgressDashboard" component={ProgressDashboardScreen} />
                 <MainStack.Screen name="Settings" component={SettingsScreen} />
                 <MainStack.Screen name="NotificationPrefs" component={NotificationPrefsScreen} />
+                <MainStack.Screen name="Upgrade" component={UpgradeScreen} />
+                {session.mode === 'guest' && (
+                    <MainStack.Screen
+                        name="SignUp"
+                        component={SignUpScreen}
+                        options={{ title: 'Create Account', headerBackTitle: 'Back' }}
+                    />
+                )}
             </MainStack.Group>
         </MainStack.Navigator>
     );
