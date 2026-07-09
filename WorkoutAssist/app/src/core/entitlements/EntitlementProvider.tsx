@@ -3,12 +3,21 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from '
 import { onSnapshot, doc } from 'firebase/firestore';
 import { useSession } from '../../session/SessionProvider';
 import { db } from '../../firebase/firebase';
-import { Entitlement, INITIAL_ENTITLEMENT_STATE } from './entitlement.model';
+import {
+    Entitlement,
+    PlanTier,
+    INITIAL_ENTITLEMENT_STATE,
+    normalizeEntitlement,
+    deriveIsPro,
+    deriveIsPlus,
+} from './entitlement.model';
 import { ENTITLEMENT_DOC_PATH } from './entitlement.paths';
 
 interface EntitlementContextValue {
     entitlement: Entitlement;
+    tier: PlanTier;
     isPro: boolean;
+    isPlus: boolean;
     loading: boolean;
     error: string | null;
 }
@@ -19,14 +28,16 @@ const DELAYED_FALLBACK_MS = 3000;
 
 export const EntitlementProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { session } = useSession();
-    const { uid } = session;
+    const { uid, mode } = session;
 
     const [entitlement, setEntitlement] = useState<Entitlement>(INITIAL_ENTITLEMENT_STATE);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!uid) {
+        // Guests have no Firebase auth — a Firestore subscription would only
+        // produce permission-denied errors. They are always FREE tier.
+        if (!uid || mode !== 'authenticated') {
             setEntitlement(INITIAL_ENTITLEMENT_STATE);
             setLoading(false);
             return;
@@ -45,7 +56,7 @@ export const EntitlementProvider: React.FC<{ children: React.ReactNode }> = ({ c
             (snapshot) => {
                 receivedData = true;
                 if (snapshot.exists()) {
-                    setEntitlement(snapshot.data() as Entitlement);
+                    setEntitlement(normalizeEntitlement(snapshot.data()));
                 } else {
                     // Handle missing doc (e.g., right after signup)
                     console.warn(`[Entitlement] Doc missing at ${ENTITLEMENT_DOC_PATH(uid)}`);
@@ -74,14 +85,15 @@ export const EntitlementProvider: React.FC<{ children: React.ReactNode }> = ({ c
             unsubscribe();
             clearTimeout(fallbackTimer);
         };
-    }, [uid]);
+    }, [uid, mode]);
 
-    const isPro = useMemo(() => {
-        return entitlement.plan === 'PRO' && (entitlement.status === 'active' || entitlement.status === 'trialing');
-    }, [entitlement]);
+    const isPro = useMemo(() => deriveIsPro(entitlement), [entitlement]);
+    const isPlus = useMemo(() => deriveIsPlus(entitlement), [entitlement]);
 
     return (
-        <EntitlementContext.Provider value={{ entitlement, isPro, loading, error }}>
+        <EntitlementContext.Provider
+            value={{ entitlement, tier: entitlement.tier, isPro, isPlus, loading, error }}
+        >
             {children}
         </EntitlementContext.Provider>
     );

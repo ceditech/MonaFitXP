@@ -11,7 +11,8 @@ import {
     InProgressWorkout,
     WorkoutSessionSet,
     UserMetrics,
-    PersonalRecord
+    PersonalRecord,
+    GamificationState
 } from '../contracts/IWorkoutRepository';
 import { db } from '../../firebase/firebase';
 import {
@@ -21,6 +22,7 @@ import {
     getDocs,
     setDoc,
     updateDoc,
+    deleteDoc,
     query,
     where,
     orderBy,
@@ -28,6 +30,8 @@ import {
     serverTimestamp,
     addDoc,
     runTransaction,
+    arrayUnion,
+    arrayRemove,
     Timestamp
 } from 'firebase/firestore';
 
@@ -48,6 +52,62 @@ export class FirestoreWorkoutRepository implements IWorkoutRepository {
             return { id: docSnap.id, ...docSnap.data() } as Exercise;
         }
         return null;
+    }
+
+    async getMergedExercises(uid: string): Promise<Exercise[]> {
+        const [catalog, custom] = await Promise.all([
+            this.getExercises(),
+            this.listCustomExercises(uid),
+        ]);
+        return [...catalog, ...custom];
+    }
+
+    async listCustomExercises(uid: string): Promise<Exercise[]> {
+        try {
+            const snap = await getDocs(collection(db, 'users', uid, 'customExercises'));
+            return snap.docs.map(d => ({
+                ...d.data(),
+                id: `custom_${d.id}`,
+                isCustom: true,
+                ownerUid: uid,
+            } as Exercise));
+        } catch (e) {
+            console.error('[FirestoreRepo] listCustomExercises error:', e);
+            return [];
+        }
+    }
+
+    async createCustomExercise(uid: string, exercise: Omit<Exercise, 'id' | 'isCustom' | 'ownerUid'>): Promise<string> {
+        const ref = await addDoc(collection(db, 'users', uid, 'customExercises'), {
+            ...exercise,
+            createdAt: serverTimestamp(),
+        });
+        return `custom_${ref.id}`;
+    }
+
+    async deleteCustomExercise(uid: string, exerciseId: string): Promise<void> {
+        const rawId = exerciseId.replace(/^custom_/, '');
+        await deleteDoc(doc(db, 'users', uid, 'customExercises', rawId));
+    }
+
+    async getFavoriteExerciseIds(uid: string): Promise<string[]> {
+        try {
+            const snap = await getDoc(doc(db, 'users', uid));
+            return (snap.data()?.favoriteExerciseIds as string[]) || [];
+        } catch (e) {
+            console.error('[FirestoreRepo] getFavoriteExerciseIds error:', e);
+            return [];
+        }
+    }
+
+    async toggleFavorite(uid: string, exerciseId: string): Promise<string[]> {
+        const current = await this.getFavoriteExerciseIds(uid);
+        const isFav = current.includes(exerciseId);
+        await setDoc(doc(db, 'users', uid), {
+            favoriteExerciseIds: isFav ? arrayRemove(exerciseId) : arrayUnion(exerciseId),
+            updatedAt: serverTimestamp(),
+        }, { merge: true });
+        return isFav ? current.filter(id => id !== exerciseId) : [...current, exerciseId];
     }
 
     async getPlanTemplates(): Promise<PlanTemplate[]> {
@@ -407,6 +467,59 @@ export class FirestoreWorkoutRepository implements IWorkoutRepository {
         return setsSnap.docs.map(d => d.data() as WorkoutSessionSet);
     }
 
+    /**
+     * Recent completed workouts, newest first. Follows the listWorkouts pattern:
+     * no orderBy (avoids composite index), sort client-side by recency.
+     */
+    private async _recentCompletedWorkouts(uid: string, max: number): Promise<{ id: string }[]> {
+        const workoutsRef = collection(db, 'users', uid, 'workouts');
+        const q = query(workoutsRef, where('status', '==', 'completed'), limit(max));
+        const snapshot = await getDocs(q);
+
+        return snapshot.docs
+            .map(d => ({ id: d.id, ...d.data() } as any))
+            .sort((a, b) => this._parseDate(b.endedAt || b.startedAt).getTime()
+                - this._parseDate(a.endedAt || a.startedAt).getTime());
+    }
+
+    private _exerciseSetsOf(sets: WorkoutSessionSet[], exerciseId: string): WorkoutSessionSet[] {
+        return sets
+            .filter(s => s.exerciseId === exerciseId && (s.actualReps || 0) > 0)
+            .sort((a, b) => a.setIndex - b.setIndex);
+    }
+
+    async getLastExercisePerformance(uid: string, exerciseId: string): Promise<WorkoutSessionSet[] | null> {
+        try {
+            const recent = await this._recentCompletedWorkouts(uid, 20);
+            for (const workout of recent) {
+                const sets = await this.listWorkoutSets(uid, workout.id);
+                const exerciseSets = this._exerciseSetsOf(sets, exerciseId);
+                if (exerciseSets.length > 0) {
+                    return exerciseSets;
+                }
+            }
+            return null;
+        } catch (e) {
+            console.error('[FirestoreRepo] getLastExercisePerformance error:', e);
+            return null;
+        }
+    }
+
+    async getExerciseSetHistory(uid: string, exerciseId: string, maxWorkouts = 20): Promise<WorkoutSessionSet[]> {
+        try {
+            const recent = await this._recentCompletedWorkouts(uid, maxWorkouts);
+            const all: WorkoutSessionSet[] = [];
+            for (const workout of recent) {
+                const sets = await this.listWorkoutSets(uid, workout.id);
+                all.push(...this._exerciseSetsOf(sets, exerciseId));
+            }
+            return all;
+        } catch (e) {
+            console.error('[FirestoreRepo] getExerciseSetHistory error:', e);
+            return [];
+        }
+    }
+
     async saveWorkoutSession(uid: string, session: WorkoutLog): Promise<void> {
         const historyRef = collection(db, 'users', uid, 'workoutLogs');
         await addDoc(historyRef, {
@@ -465,6 +578,28 @@ export class FirestoreWorkoutRepository implements IWorkoutRepository {
                 weeklyVolume: 0,
                 prs: []
             };
+        }
+    }
+
+    async getGamification(uid: string): Promise<GamificationState | null> {
+        try {
+            const docRef = doc(db, 'users', uid, 'metrics', 'gamification');
+            const docSnap = await getDoc(docRef);
+            if (!docSnap.exists()) return null;
+            const data = docSnap.data();
+            return {
+                totalXp: data.totalXp || 0,
+                level: data.level || 1,
+                lifetimeWorkouts: data.lifetimeWorkouts || 0,
+                lifetimeVolume: data.lifetimeVolume || 0,
+                lifetimeSets: data.lifetimeSets || 0,
+                lifetimePrs: data.lifetimePrs || 0,
+                badges: data.badges || {},
+                lastAward: data.lastAward,
+            };
+        } catch (e) {
+            console.error('[FirestoreRepo] getGamification error:', e);
+            return null;
         }
     }
 

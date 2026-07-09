@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-na
 import { Colors } from '../shared/ui/Theme';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEntitlement } from '../core/entitlements/EntitlementProvider';
+import { tierLabel } from '../core/entitlements/entitlement.model';
 
 export const UpgradeScreen = ({ route, navigation }: any) => {
     const { entitlement } = useEntitlement();
@@ -24,7 +25,7 @@ export const UpgradeScreen = ({ route, navigation }: any) => {
 
                 <View style={styles.infoBox}>
                     <Text style={styles.currentPlanText}>
-                        Current Plan: <Text style={styles.planName}>{entitlement.plan}</Text>
+                        Current Plan: <Text style={styles.planName}>{tierLabel(entitlement.tier)}</Text>
                     </Text>
                 </View>
 

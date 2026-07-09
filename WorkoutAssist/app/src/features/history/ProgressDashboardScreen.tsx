@@ -15,7 +15,9 @@ import { Colors } from '../../shared/ui/Theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useWorkoutRepo } from '../../repositories';
 import { useSession } from '../../session/SessionProvider';
-import { UserMetrics, Exercise } from '../../data/contracts/IWorkoutRepository';
+import { UserMetrics, Exercise, GamificationState } from '../../data/contracts/IWorkoutRepository';
+import { E1RMSection } from './components/E1RMSection';
+import { BadgesSection } from '../gamification/BadgesSection';
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - 48) / 3;
@@ -24,6 +26,7 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
     const { session } = useSession();
     const repo = useWorkoutRepo();
     const [metrics, setMetrics] = useState<UserMetrics | null>(null);
+    const [gamification, setGamification] = useState<GamificationState | null>(null);
     const [exercises, setExercises] = useState<Record<string, Exercise>>({});
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -33,9 +36,10 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
         if (!session.uid) return;
         try {
             setError(null);
-            const [metricsData, exercisesData] = await Promise.all([
+            const [metricsData, exercisesData, gamificationData] = await Promise.all([
                 repo.getMetrics(session.uid),
-                repo.getExercises()
+                repo.getExercises(),
+                repo.getGamification(session.uid).catch(() => null)
             ]);
 
             // Convert exercise list to map for fast lookup
@@ -45,6 +49,7 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
             });
 
             setMetrics(metricsData);
+            setGamification(gamificationData);
             setExercises(exMap);
         } catch (err) {
             console.error('[ProgressDashboard] load error:', err);
@@ -174,6 +179,18 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
                         })
                     )}
                 </View>
+
+                {/* Badges */}
+                {gamification && <BadgesSection earnedBadges={gamification.badges} />}
+
+                {/* Estimated 1RM */}
+                {session.uid && (
+                    <E1RMSection
+                        uid={session.uid}
+                        prs={metrics?.prs || []}
+                        exercises={exercises}
+                    />
+                )}
 
                 {/* Volume Chart */}
                 <View style={[styles.section, { marginBottom: 40 }]}>

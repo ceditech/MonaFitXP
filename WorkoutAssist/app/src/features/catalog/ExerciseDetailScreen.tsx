@@ -10,14 +10,20 @@ import {
     Image,
     StatusBar
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../shared/ui/Theme';
 import { useWorkoutRepo } from '../../repositories';
+import { useSession } from '../../session/SessionProvider';
 import { Exercise } from '../../data/contracts/IWorkoutRepository';
 import { Ionicons } from '@expo/vector-icons';
+import { MuscleDiagram } from './components/MuscleDiagram';
+import { ExerciseDemo } from '../../lib/motion/components/ExerciseDemo';
+import { inferAnimationKey, isAnimationKey } from '../../lib/motion/mannequin/poses';
 
 export const ExerciseDetailScreen = ({ route, navigation }: any) => {
     const { exerciseId } = route.params || {};
     const repo = useWorkoutRepo();
+    const { session } = useSession();
     const [exercise, setExercise] = useState<Exercise | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -36,7 +42,12 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
         try {
             setLoading(true);
             setError(null);
-            const data = await repo.getExercise(exerciseId);
+            let data = await repo.getExercise(exerciseId);
+            // Custom exercises live under the user, not the global catalog.
+            if (!data && exerciseId.startsWith('custom_') && session.uid) {
+                const custom = await repo.listCustomExercises(session.uid);
+                data = custom.find(e => e.id === exerciseId) || null;
+            }
             if (data) {
                 setExercise(data);
             } else {
@@ -104,38 +115,68 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
-                {/* Media Placeholder */}
-                <View style={styles.mediaArea}>
-                    <View style={styles.mediaPlaceholder}>
-                        <Ionicons name="play-circle" size={64} color="rgba(255,255,255,0.2)" />
-                        <Text style={styles.mediaNote}>Demo media coming soon</Text>
-                    </View>
+                {/* 3D Form Demo Hero */}
+                <View style={styles.heroWrap}>
+                    <LinearGradient
+                        colors={['#2A1040', '#1A1A2E']}
+                        start={{ x: 0.5, y: 0 }}
+                        end={{ x: 0.5, y: 1 }}
+                        style={styles.hero}
+                    >
+                        <View style={styles.demoBadge}>
+                            <Ionicons name="cube-outline" size={12} color={Colors.brandOrange} />
+                            <Text style={styles.demoBadgeText}>3D FORM DEMO</Text>
+                        </View>
+                        <ExerciseDemo
+                            animationKey={isAnimationKey(exercise.media?.animationKey)
+                                ? exercise.media!.animationKey!
+                                : inferAnimationKey(exercise.name)}
+                            height={320}
+                            fallback={
+                                <View style={styles.demoFallback}>
+                                    <MuscleDiagram
+                                        primary={exercise.muscleDiagram?.primary
+                                            || (exercise.primaryMuscleGroup ? [exercise.primaryMuscleGroup] : [])}
+                                        secondary={exercise.muscleDiagram?.secondary || []}
+                                    />
+                                </View>
+                            }
+                        />
+                        {/* Meta chips floating over the hero bottom */}
+                        <View style={styles.heroChips}>
+                            {exercise.difficulty && (
+                                <View style={[styles.badge, styles[exercise.difficulty]]}>
+                                    <Text style={styles.badgeText}>{exercise.difficulty}</Text>
+                                </View>
+                            )}
+                            <View style={styles.typeBadge}>
+                                <Text style={styles.badgeText}>{exercise.type}</Text>
+                            </View>
+                        </View>
+                    </LinearGradient>
                 </View>
 
-                {/* Metadata */}
+                {/* Target muscles & equipment */}
                 <View style={styles.section}>
-                    <View style={styles.metaRow}>
-                        {exercise.difficulty && (
-                            <View style={[styles.badge, styles[exercise.difficulty]]}>
-                                <Text style={styles.badgeText}>{exercise.difficulty}</Text>
-                            </View>
-                        )}
-                        <View style={styles.typeBadge}>
-                            <Text style={styles.badgeText}>{exercise.type}</Text>
+                    <Text style={styles.sectionTitle}>Targets</Text>
+                    <View style={styles.targetsCard}>
+                        <MuscleDiagram
+                            primary={exercise.muscleDiagram?.primary
+                                || (exercise.primaryMuscleGroup ? [exercise.primaryMuscleGroup] : [])}
+                            secondary={exercise.muscleDiagram?.secondary || []}
+                        />
+                        <View style={styles.chipCloud}>
+                            {exercise.muscles.map(m => (
+                                <View key={m} style={styles.muscleChip}>
+                                    <Text style={styles.chipText}>{m}</Text>
+                                </View>
+                            ))}
+                            {exercise.equipment.map(e => (
+                                <View key={e} style={styles.equipmentChip}>
+                                    <Text style={styles.chipText}>{e}</Text>
+                                </View>
+                            ))}
                         </View>
-                    </View>
-
-                    <View style={styles.chipCloud}>
-                        {exercise.muscles.map(m => (
-                            <View key={m} style={styles.muscleChip}>
-                                <Text style={styles.chipText}>{m}</Text>
-                            </View>
-                        ))}
-                        {exercise.equipment.map(e => (
-                            <View key={e} style={styles.equipmentChip}>
-                                <Text style={styles.chipText}>{e}</Text>
-                            </View>
-                        ))}
                     </View>
                 </View>
 
@@ -143,6 +184,18 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>How to Perform</Text>
                     {renderInstructions(exercise.instructions)}
+
+                    {exercise.formTip ? (
+                        <View style={styles.tipCard}>
+                            <View style={styles.tipIcon}>
+                                <Ionicons name="bulb" size={16} color={Colors.brandOrange} />
+                            </View>
+                            <View style={styles.tipBody}>
+                                <Text style={styles.tipLabel}>PRO TIP</Text>
+                                <Text style={styles.tipText}>{exercise.formTip}</Text>
+                            </View>
+                        </View>
+                    ) : null}
                 </View>
 
                 <View style={styles.bottomSpacer} />
@@ -187,18 +240,55 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingBottom: 40,
     },
-    mediaArea: {
+    heroWrap: {
         padding: 16,
     },
-    mediaPlaceholder: {
-        width: '100%',
-        aspectRatio: 16 / 9,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        borderRadius: 16,
+    hero: {
+        borderRadius: 24,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(142, 36, 170, 0.3)',
+        paddingBottom: 14,
+    },
+    demoBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        alignSelf: 'flex-start',
+        backgroundColor: 'rgba(0,0,0,0.35)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 122, 41, 0.35)',
+        borderRadius: 12,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        margin: 12,
+        marginBottom: -30,
+        zIndex: 2,
+    },
+    demoBadgeText: {
+        color: Colors.brandOrange,
+        fontSize: 10,
+        fontWeight: '900',
+        letterSpacing: 1,
+    },
+    demoFallback: {
+        height: 320,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    heroChips: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    targetsCard: {
+        backgroundColor: 'rgba(255,255,255,0.04)',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor: 'rgba(255,255,255,0.06)',
+        borderRadius: 20,
+        padding: 16,
+        alignItems: 'center',
+        gap: 12,
     },
     mediaNote: {
         color: 'rgba(255,255,255,0.4)',
@@ -295,6 +385,41 @@ const styles = StyleSheet.create({
         color: 'rgba(255,255,255,0.8)',
         fontSize: 16,
         lineHeight: 24,
+    },
+    tipCard: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 12,
+        backgroundColor: 'rgba(255, 122, 41, 0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 122, 41, 0.3)',
+        borderRadius: 16,
+        padding: 14,
+        marginTop: 8,
+    },
+    tipIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255, 122, 41, 0.18)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    tipBody: {
+        flex: 1,
+    },
+    tipLabel: {
+        color: Colors.brandOrange,
+        fontSize: 11,
+        fontWeight: '900',
+        letterSpacing: 1,
+        marginBottom: 3,
+    },
+    tipText: {
+        color: 'rgba(255,255,255,0.85)',
+        fontSize: 14,
+        lineHeight: 20,
+        fontWeight: '500',
     },
     errorText: {
         color: 'rgba(255,255,255,0.6)',

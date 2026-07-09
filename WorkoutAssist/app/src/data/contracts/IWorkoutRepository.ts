@@ -9,6 +9,20 @@ export interface Exercise {
   equipment: string[];
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
   instructions?: string[];
+  /** One-line coaching cue shown as a highlighted "Pro Tip" callout. */
+  formTip?: string;
+
+  // Rich-catalog fields (all optional — legacy docs need no migration)
+  media?: {
+    thumbnailUrl?: string;
+    videoUrl?: string;
+    /** Key of a future 3D form-demo animation clip. */
+    animationKey?: string;
+  };
+  primaryMuscleGroup?: string;
+  muscleDiagram?: { primary: string[]; secondary: string[] };
+  isCustom?: boolean;
+  ownerUid?: string;
 }
 
 export interface PlanTemplateBlock {
@@ -52,6 +66,9 @@ export interface UserProfile {
     reminderTime: string; // "HH:mm"
     reminderDays: string[]; // ["Mon", "Tue", ...]
   };
+
+  // Favorited exercise ids (catalog or custom_-prefixed)
+  favoriteExerciseIds?: string[];
 
   updatedAt?: string;
 }
@@ -118,10 +135,39 @@ export interface UserMetrics {
   volumeHistory?: { date: string, volume: number }[];
 }
 
+export interface XpAwardRecord {
+  workoutId: string;
+  xp: number;
+  breakdown: { base: number; sets: number; volume: number; prs: number; streak: number };
+  newBadgeIds?: string[];
+  at?: any; // Firestore Timestamp
+}
+
+/** Server-written doc at users/{uid}/metrics/gamification (client read-only). */
+export interface GamificationState {
+  totalXp: number;
+  level: number;
+  lifetimeWorkouts: number;
+  lifetimeVolume: number;
+  lifetimeSets: number;
+  lifetimePrs: number;
+  badges: Record<string, { earnedAt: any }>;
+  lastAward?: XpAwardRecord;
+}
+
 export interface IWorkoutRepository {
   // Catalogs
   getExercises(): Promise<Exercise[]>;
   getExercise(id: string): Promise<Exercise | null>;
+  /** Catalog + the user's custom exercises merged (custom ids are `custom_`-prefixed). */
+  getMergedExercises(uid: string): Promise<Exercise[]>;
+
+  // Custom exercises & favorites
+  listCustomExercises(uid: string): Promise<Exercise[]>;
+  createCustomExercise(uid: string, exercise: Omit<Exercise, 'id' | 'isCustom' | 'ownerUid'>): Promise<string>;
+  deleteCustomExercise(uid: string, exerciseId: string): Promise<void>;
+  getFavoriteExerciseIds(uid: string): Promise<string[]>;
+  toggleFavorite(uid: string, exerciseId: string): Promise<string[]>;
   getPlanTemplates(): Promise<PlanTemplate[]>;
   getPlanTemplate(id: string): Promise<PlanTemplate | null>;
 
@@ -146,6 +192,16 @@ export interface IWorkoutRepository {
 
   // History
   getHistory(uid: string): Promise<WorkoutLog[]>;
+  /**
+   * The logged sets for `exerciseId` from the most recent completed workout
+   * that contains it, or null when the user has never performed it.
+   */
+  getLastExercisePerformance(uid: string, exerciseId: string): Promise<WorkoutSessionSet[] | null>;
+  /**
+   * All logged sets for `exerciseId` across recent completed workouts
+   * (bounded by maxWorkouts, newest first). Used for e1RM timelines.
+   */
+  getExerciseSetHistory(uid: string, exerciseId: string, maxWorkouts?: number): Promise<WorkoutSessionSet[]>;
   listWorkouts(uid: string, options?: { status?: string; limit?: number }): Promise<InProgressWorkout[]>;
   getWorkout(uid: string, workoutId: string): Promise<InProgressWorkout | null>;
   listWorkoutSets(uid: string, workoutId: string): Promise<WorkoutSessionSet[]>;
@@ -153,5 +209,6 @@ export interface IWorkoutRepository {
 
   // Metrics & Entitlements
   getMetrics(uid: string): Promise<UserMetrics>;
+  getGamification(uid: string): Promise<GamificationState | null>;
   getEntitlement(uid: string): Promise<{ tier: string }>;
 }

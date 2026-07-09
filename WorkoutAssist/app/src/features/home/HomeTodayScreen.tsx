@@ -12,7 +12,8 @@ import {
 import { useSession } from '../../session/SessionProvider';
 import { useWorkoutRepo } from '../../repositories';
 import { Colors } from '../../shared/ui/Theme';
-import { UserProfile } from '../../data/contracts/IWorkoutRepository';
+import { UserProfile, GamificationState } from '../../data/contracts/IWorkoutRepository';
+import { LevelRing } from '../gamification/LevelRing';
 
 export const HomeTodayScreen = ({ navigation }: any) => {
     const { session, signOut } = useSession();
@@ -23,18 +24,21 @@ export const HomeTodayScreen = ({ navigation }: any) => {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [activePlan, setActivePlan] = useState<any | null>(null);
     const [metrics, setMetrics] = useState<any>(null);
+    const [gamification, setGamification] = useState<GamificationState | null>(null);
 
     const loadData = async () => {
         if (!session.uid) return;
         try {
-            const [p, plan, m] = await Promise.all([
+            const [p, plan, m, g] = await Promise.all([
                 repo.getUserProfile(session.uid),
                 repo.getActivePlan(session.uid),
-                repo.getMetrics(session.uid)
+                repo.getMetrics(session.uid),
+                repo.getGamification(session.uid).catch(() => null)
             ]);
             setProfile(p);
             setActivePlan(plan);
             setMetrics(m);
+            setGamification(g);
         } catch (error) {
             console.error('Error loading home data:', error);
         } finally {
@@ -91,11 +95,14 @@ export const HomeTodayScreen = ({ navigation }: any) => {
                         <Text style={styles.greeting}>Ready for your workout?</Text>
                         <Text style={styles.userName}>{profile?.name || 'Guest User'}</Text>
                     </View>
-                    {profile?.goal && (
-                        <View style={styles.goalChip}>
-                            <Text style={styles.goalText}>{profile.goal.replace('_', ' ').toUpperCase()}</Text>
-                        </View>
-                    )}
+                    <View style={styles.headerRight}>
+                        {gamification && <LevelRing totalXp={gamification.totalXp} />}
+                        {profile?.goal && (
+                            <View style={styles.goalChip}>
+                                <Text style={styles.goalText}>{profile.goal.replace('_', ' ').toUpperCase()}</Text>
+                            </View>
+                        )}
+                    </View>
                 </View>
 
                 {session.mode === 'guest' && (
@@ -208,6 +215,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 20,
         marginBottom: 32,
+    },
+    headerRight: {
+        alignItems: 'center',
+        gap: 8,
     },
     greeting: {
         color: 'rgba(255,255,255,0.6)',

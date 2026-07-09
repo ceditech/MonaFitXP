@@ -1,91 +1,101 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as GuestStore from '../guestStore';
 
-jest.mock('uuid', () => ({
-    v4: () => 'mock-uuid',
-}));
+// AsyncStorage is mocked globally in jest.setup.js with the official mock.
 
-// Mock localStorage
-const storage: Record<string, string> = {};
-const localStorageMock = {
-    getItem: jest.fn((key: string) => storage[key] || null),
-    setItem: jest.fn((key: string, value: string) => { storage[key] = value; }),
-    removeItem: jest.fn((key: string) => { delete storage[key]; }),
-    clear: jest.fn(() => { Object.keys(storage).forEach(k => delete storage[k]); }),
-    length: 0,
-    key: jest.fn((index: number) => Object.keys(storage)[index] || null),
-};
-
-Object.defineProperty(global, 'localStorage', { value: localStorageMock });
-Object.defineProperty(global, 'window', { value: {} });
+const GUEST_UID_KEY = 'workoutassist.guestUid';
+const MIGRATION_KEY = 'wa_guest_migration_state_v1';
 
 describe('GuestStore', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
+        await AsyncStorage.clear();
         jest.clearAllMocks();
-        localStorage.clear();
     });
 
-    describe('getOrCreateGuestId', () => {
-        it('should generate a new guest ID if none exists', () => {
-            const id = GuestStore.getOrCreateGuestId();
-            expect(id).toBeDefined();
-            expect(typeof id).toBe('string');
-            expect(localStorage.setItem).toHaveBeenCalledWith('wa_guest_id_v1', id);
+    describe('getGuestUid', () => {
+        it('returns null when no guest uid is stored', async () => {
+            expect(await GuestStore.getGuestUid()).toBeNull();
         });
 
-        it('should return existing guest ID if it exists', () => {
-            const existingId = 'existing-id';
-            localStorage.setItem('wa_guest_id_v1', existingId);
-            const id = GuestStore.getOrCreateGuestId();
-            expect(id).toBe(existingId);
-            expect(localStorage.setItem).toHaveBeenCalledTimes(1); // Set in setup
+        it('returns the stored guest uid', async () => {
+            await AsyncStorage.setItem(GUEST_UID_KEY, 'guest-123');
+            expect(await GuestStore.getGuestUid()).toBe('guest-123');
         });
     });
 
-    describe('Workout CRUD', () => {
-        const mockWorkout: GuestStore.GuestWorkout = {
-            clientId: 'workout-1',
-            createdAtMs: 1000,
-            updatedAtMs: 1000,
-            payload: { name: 'Test Workout' }
-        };
-
-        it('should upsert and read workouts', () => {
-            GuestStore.upsertGuestWorkout(mockWorkout);
-            const workouts = GuestStore.readGuestWorkouts();
-            expect(workouts).toHaveLength(1);
-            expect(workouts[0].clientId).toBe(mockWorkout.clientId);
+    describe('readGuestWorkouts', () => {
+        it('returns empty array when there is no guest uid', async () => {
+            expect(await GuestStore.readGuestWorkouts()).toEqual([]);
         });
 
-        it('should update an existing workout', () => {
-            GuestStore.upsertGuestWorkout(mockWorkout);
-            const updatedWorkout = { ...mockWorkout, payload: { name: 'Updated' } };
-            GuestStore.upsertGuestWorkout(updatedWorkout);
-
-            const workouts = GuestStore.readGuestWorkouts();
-            expect(workouts).toHaveLength(1);
-            expect(workouts[0].payload.name).toBe('Updated');
+        it('returns empty array when the guest has no workout details', async () => {
+            await AsyncStorage.setItem(GUEST_UID_KEY, 'guest-123');
+            expect(await GuestStore.readGuestWorkouts()).toEqual([]);
         });
 
-        it('should remove a workout', () => {
-            GuestStore.upsertGuestWorkout(mockWorkout);
-            GuestStore.removeGuestWorkout(mockWorkout.clientId);
-            expect(GuestStore.readGuestWorkouts()).toHaveLength(0);
+        it('maps the repository details map to GuestWorkout entries', async () => {
+            await AsyncStorage.setItem(GUEST_UID_KEY, 'guest-123');
+            const detailsMap = {
+                w1: { name: 'Push Day', startedAt: '2026-01-05T10:00:00.000Z' },
+                w2: { name: 'Leg Day', startedAt: '2026-01-06T10:00:00.000Z', updatedAtMs: 42 },
+            };
+            await AsyncStorage.setItem('WA_DATA_guest-123_history_details', JSON.stringify(detailsMap));
+
+            const workouts = await GuestStore.readGuestWorkouts();
+
+            expect(workouts).toHaveLength(2);
+            const w1 = workouts.find(w => w.clientId === 'w1')!;
+            expect(w1.payload.name).toBe('Push Day');
+            expect(w1.createdAtMs).toBe(new Date('2026-01-05T10:00:00.000Z').getTime());
+            const w2 = workouts.find(w => w.clientId === 'w2')!;
+            expect(w2.updatedAtMs).toBe(42);
         });
 
-        it('should clear all workouts', () => {
-            GuestStore.upsertGuestWorkout(mockWorkout);
-            GuestStore.clearGuestWorkouts();
-            expect(GuestStore.readGuestWorkouts()).toHaveLength(0);
+        it('returns empty array on corrupted JSON instead of throwing', async () => {
+            await AsyncStorage.setItem(GUEST_UID_KEY, 'guest-123');
+            await AsyncStorage.setItem('WA_DATA_guest-123_history_details', 'not-json{');
+            expect(await GuestStore.readGuestWorkouts()).toEqual([]);
         });
     });
 
-    describe('Migration State', () => {
-        it('should get and set migration state', () => {
-            expect(GuestStore.getMigrationState()).toEqual({ status: 'idle' });
+    describe('clearGuestData', () => {
+        it('removes the guest uid and all namespaced data keys', async () => {
+            await AsyncStorage.setItem(GUEST_UID_KEY, 'guest-123');
+            await AsyncStorage.setItem('WA_DATA_guest-123_history', '[]');
+            await AsyncStorage.setItem('WA_DATA_guest-123_history_details', '{}');
+            await AsyncStorage.setItem('WA_DATA_guest-123_metrics', '{}');
 
-            const newState: GuestStore.MigrationState = { status: 'complete' };
-            GuestStore.setMigrationState(newState);
-            expect(GuestStore.getMigrationState()).toEqual(newState);
+            await GuestStore.clearGuestData();
+
+            expect(await AsyncStorage.getItem(GUEST_UID_KEY)).toBeNull();
+            expect(await AsyncStorage.getItem('WA_DATA_guest-123_history')).toBeNull();
+            expect(await AsyncStorage.getItem('WA_DATA_guest-123_history_details')).toBeNull();
+            expect(await AsyncStorage.getItem('WA_DATA_guest-123_metrics')).toBeNull();
+        });
+
+        it('is a no-op when there is no guest uid', async () => {
+            await expect(GuestStore.clearGuestData()).resolves.toBeUndefined();
+        });
+    });
+
+    describe('Migration state', () => {
+        it('defaults to idle when nothing is stored', async () => {
+            expect(await GuestStore.getMigrationState()).toEqual({ status: 'idle' });
+        });
+
+        it('round-trips a stored migration state', async () => {
+            await GuestStore.setMigrationState({ status: 'complete' });
+            expect(await GuestStore.getMigrationState()).toEqual({ status: 'complete' });
+        });
+
+        it('persists failure details', async () => {
+            await GuestStore.setMigrationState({ status: 'failed', lastError: 'boom' });
+            expect(await GuestStore.getMigrationState()).toEqual({ status: 'failed', lastError: 'boom' });
+        });
+
+        it('defaults to idle on corrupted stored state', async () => {
+            await AsyncStorage.setItem(MIGRATION_KEY, '{{bad');
+            expect(await GuestStore.getMigrationState()).toEqual({ status: 'idle' });
         });
     });
 });
