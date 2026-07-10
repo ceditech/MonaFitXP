@@ -9,7 +9,8 @@ import {
     SafeAreaView,
     ActivityIndicator,
     ScrollView,
-    StatusBar
+    StatusBar,
+    Image
 } from 'react-native';
 import { Colors } from '../../shared/ui/Theme';
 import { useWorkoutRepo } from '../../repositories';
@@ -17,6 +18,7 @@ import { useSession } from '../../session/SessionProvider';
 import { Exercise } from '../../data/contracts/IWorkoutRepository';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { getExerciseImage } from '../../data/exerciseImages';
 
 const MUSCLE_GROUPS = [
     'All', 'Quads', 'Glutes', 'Chest', 'Triceps', 'Back',
@@ -138,6 +140,13 @@ export const ExerciseCatalogScreen = ({ navigation }: any) => {
             activeOpacity={0.7}
         >
             <View style={styles.cardContent}>
+                <View style={styles.thumbWrap}>
+                    {getExerciseImage(item.id) ? (
+                        <Image source={getExerciseImage(item.id)!} style={styles.thumb} resizeMode="cover" />
+                    ) : (
+                        <Ionicons name="barbell-outline" size={22} color="rgba(255,255,255,0.25)" />
+                    )}
+                </View>
                 <View style={styles.infoColumn}>
                     <View style={styles.nameRow}>
                         <Text style={styles.exerciseName}>{item.name}</Text>
@@ -421,6 +430,20 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
+    },
+    thumbWrap: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        marginRight: 12,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+    },
+    thumb: {
+        width: 48,
+        height: 48,
     },
     infoColumn: {
         flex: 1,

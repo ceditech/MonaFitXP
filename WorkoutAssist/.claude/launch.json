@@ -6,7 +6,8 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "cwd": "app",
-      "port": 8081
+      "port": 8081,
+      "autoPort": true
     }
   ]
 }

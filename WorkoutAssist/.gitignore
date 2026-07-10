@@ -10,6 +10,9 @@ firebase-debug.*.log*
 # Firebase cache
 .firebase/
 
+# Flux/BFL generated image output (review artifacts, not committed)
+flux-output/
+
 # Firebase Service Account Key
 secrets/
 **/serviceAccountKey*.json

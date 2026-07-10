@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { MuscleDiagram } from './components/MuscleDiagram';
 import { ExerciseDemo } from '../../lib/motion/components/ExerciseDemo';
 import { inferAnimationKey, isAnimationKey } from '../../lib/motion/mannequin/poses';
+import { getExerciseImage } from '../../data/exerciseImages';
 
 export const ExerciseDetailScreen = ({ route, navigation }: any) => {
     const { exerciseId } = route.params || {};
@@ -133,13 +134,21 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
                                 : inferAnimationKey(exercise.name)}
                             height={320}
                             fallback={
-                                <View style={styles.demoFallback}>
-                                    <MuscleDiagram
-                                        primary={exercise.muscleDiagram?.primary
-                                            || (exercise.primaryMuscleGroup ? [exercise.primaryMuscleGroup] : [])}
-                                        secondary={exercise.muscleDiagram?.secondary || []}
+                                getExerciseImage(exercise.id) ? (
+                                    <Image
+                                        source={getExerciseImage(exercise.id)!}
+                                        style={styles.heroPoster}
+                                        resizeMode="cover"
                                     />
-                                </View>
+                                ) : (
+                                    <View style={styles.demoFallback}>
+                                        <MuscleDiagram
+                                            primary={exercise.muscleDiagram?.primary
+                                                || (exercise.primaryMuscleGroup ? [exercise.primaryMuscleGroup] : [])}
+                                            secondary={exercise.muscleDiagram?.secondary || []}
+                                        />
+                                    </View>
+                                )
                             }
                         />
                         {/* Meta chips floating over the hero bottom */}
@@ -275,6 +284,10 @@ const styles = StyleSheet.create({
         height: 320,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    heroPoster: {
+        width: '100%',
+        height: 320,
     },
     heroChips: {
         flexDirection: 'row',
