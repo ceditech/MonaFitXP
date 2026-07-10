@@ -1,109 +1,118 @@
-# WorkoutAssist Roadmap Plan
+# WorkoutAssist / MonaFitXP — Feature Status
 
-## 1. Completed So Far
+_Last reconciled with the codebase: 2026-07-08._
 
-WorkoutAssist already has a solid MVP foundation:
+This document reflects the **actual** state of the code, not aspirational planning.
+Status legend: ✅ Completed · 🟡 In progress / partial · 🔴 Not started.
 
-- React Native / Expo app structure with Android, iOS, and web support.
-- Firebase integration for Auth, Firestore, Cloud Functions, security rules, and indexes.
-- Auth flow with welcome screen, guest mode, email sign-in, and email sign-up.
-- Session and profile bootstrapping, including guest-to-account migration support.
-- Onboarding wizard for goal, experience, equipment, schedule, injuries, session length, and timezone.
-- Main tab navigation for Today, Plans, Exercises, History, and AI Coach.
-- Today dashboard with active plan, streak/completion metrics, quick actions, and guest upgrade banner.
-- Exercise catalog with search, muscle filters, equipment filters, and exercise detail navigation.
+---
+
+## 1. Completed Features ✅
+
+### 1.1 Core MVP (foundation)
+- React Native / Expo app for Android, iOS, and web.
+- Firebase integration: Auth, Firestore, Cloud Functions, security rules, indexes.
+- Auth flow: welcome screen, guest mode, email sign-in, email sign-up.
+- Session and profile bootstrapping, including guest-to-account workout migration.
+- Onboarding wizard: goal, experience, equipment, schedule, injuries, session length, timezone.
+- Main tab navigation: Today, Plans, Exercises, History, AI Coach.
+- Today dashboard: active plan, streak/completion metrics, quick actions, guest upgrade banner.
+- Exercise catalog: search, muscle filters, equipment filters, detail navigation.
 - Plan templates list with difficulty and days-per-week filters.
 - Plan detail and create-plan flow with selectable workout days.
-- Guided workout player with timer, set logging, rest timer, resume/save-exit behavior, and finish flow.
+- Guided workout player: session timer, set logging, rest timer, resume / save-exit, finish flow.
 - Workout summary, workout history, and progress dashboard screens.
-- Notification preference UI and persisted notification preference fields.
-- Paywall UI with Free, Plus, and Pro tiers plus placeholder upgrade buttons.
-- Entitlement provider and Pro-gated AI Coach placeholder.
-- Firebase Cloud Functions for user initialization and workout-completion metrics aggregation.
+- Cloud Functions: user initialization, and workout-completion metrics aggregation (streak, weekly volume, PRs, volume history).
 
-## 2. In Progress
+### 1.2 Robustness & correctness (added Jul 2026)
+- Test harness repaired: migrated to the `jest-expo` preset with AsyncStorage + Firebase SDK mocks (fixed 5 previously-broken suites); resolved the `react@19.1.0` / `react-test-renderer` version mismatch.
+- Global `ErrorBoundary` wrapping the app (reused as the silent fallback boundary for optional visuals).
+- Tiered access guard: `RequireTier` with `RequirePro` / `RequirePlus` wrappers (single gating implementation).
+- **Entitlement schema unified** on `tier: 'free' | 'plus' | 'pro'`: fixed a bug where `isPro` was permanently false (it read a field the backend never wrote); added `isPlus`; legacy `plan` docs are normalized. Guests no longer trigger Firestore permission-denied errors.
+- **Metrics correctness fixes** in the workout-completion function: real consecutive-day streak (previously counted unique days), and timezone-aware day bucketing for streak and volume history. Logic extracted into pure, testable helpers.
 
-These areas exist in code but still need completion, verification, or production hardening:
+### 1.3 Smart training tools (added Jul 2026)
+- Pure training library: Epley estimated 1RM + per-day e1RM timeline, progressive-overload suggestion (increase / hold / deload), barbell plate calculator, warm-up-set generator.
+- Workout Player surfacing: last-performance overload suggestion chip (Plus-gated with upsell), plate-calculator sheet, warm-up suggestion.
+- Progress dashboard: "Estimated 1RM" section with a Plus-gated per-exercise e1RM history chart.
+- Repository support: `getLastExercisePerformance`, `getExerciseSetHistory`.
 
-- Workout player and summary are implemented, but resume behavior, UI polish, browser/device testing, and persistence verification still need to be completed.
-- Create plan flow is implemented, but repository integration, validation, and browser/device testing still need verification.
-- Home Today is implemented, but delivery/task tracking is stale and should be reconciled with the codebase.
-- Entitlements and paywall gating exist, but real payment/subscription integration is not implemented.
-- Notification preferences can be saved, but real push or local notification scheduling is deferred.
-- AI Coach is routed and Pro-gated, but currently remains a placeholder.
+### 1.4 Gamification — XP, levels, badges (added Jul 2026, server-authoritative)
+- XP awarded per completed workout via the `onWorkoutCompleted` function: capped formula (base + sets + volume + PRs + streak), daily cap, and retry idempotency, inside a transaction.
+- Level curve and 10 achievable badges evaluated server-side.
+- Stored at `users/{uid}/metrics/gamification` (client-write-denied by existing rules — anti-cheat).
+- Client UI: Level ring on Home, XP-gained card on the workout summary, badges grid on Progress.
 
-## 3. Remaining To Implement
+### 1.5 Exercise animations & modern UI (added Jul 2026)
+- Three.js + GSAP motion architecture: lazily code-split, with a web `<canvas>` adapter and a native `expo-gl` adapter, SVG fallbacks, and reduce-motion / no-GL handling — so animations never block the workout flow.
+- **Procedural animated mannequin** performing 16 distinct exercise movements (squat, lunge, deadlift, bench, overhead press, row, curl, push-up, pull-up, plank, jumping jack, run, crunch, calf raise, lateral raise, generic) — no 3D asset files required.
+- Shown as the form-demo hero on the redesigned Exercise Detail screen and in the Workout Player (animates the current exercise; pulses on set log, green on PR).
+- Rest-timer progress ring (rest overlay) and celebration particle bursts on the summary (finish / PR / level-up).
+- Web layout now renders in a centered phone-width frame (fixes the stretched desktop layout).
 
-Key product and platform work still outstanding:
+### 1.6 Richer exercise catalog (added Jul 2026)
+- Exercise schema extended (all optional, backward-compatible): `media` (thumbnail/video/animationKey), `primaryMuscleGroup`, `muscleDiagram`, `isCustom`/`ownerUid`, `formTip`.
+- **Custom exercises**: create / delete, per-user (`users/{uid}/customExercises`) with validation rules; merged with the catalog in the repository layer.
+- **Favorites**: star toggle + "Favorites" filter (`favoriteExerciseIds` on the profile).
+- `MuscleDiagram` SVG body-highlight component (the slot future form-demo art can replace).
+- Create-custom-exercise screen.
+- **"How to Perform" content for all 20 catalog exercises**: 5 structured coaching steps each plus a highlighted "Pro Tip" cue.
 
-- Real payment integration for Plus and Pro subscriptions.
-- Server-verified entitlement updates after successful purchase.
-- Actual push/local reminder scheduling and notification permission handling.
-- Fully functional AI Coach with chat, adaptive routines, form analysis, or plan recommendations.
-- Custom workout builder.
+### 1.7 Sharing (added Jul 2026)
+- Shareable branded workout-summary card: native path via `react-native-view-shot` + `expo-sharing`; web path via canvas + Web Share API / PNG download.
+
+---
+
+## 2. In Progress / Partial 🟡
+
+- **Monetization** — Paywall UI, all three tiers, entitlement provider, and Plus/Pro gating are live, and the entitlement document is secured for server-only writes. **Missing:** real payment integration (the upgrade action is a "Stripe flow coming soon" stub) and a server-side purchase-verification function.
+- **AI Coach** — routed and Pro-gated, but the screen is still a **static placeholder** (no chat, no logic).
+- **Notifications** — preference UI and persisted preference fields exist, but there is **no real scheduling or permission handling** (`expo-notifications` is not installed).
+- **Native (Android / iOS) verification** — the new 3D exercise scenes and the share sheet have been verified on **web only**; native device/emulator smoke testing is pending.
+- **Firestore re-seed** — the enriched exercise fields (instructions, `formTip`, `animationKey`, `primaryMuscleGroup`) are in the local seed file, so guest/mock users have them now; a `npm run seed` re-seed is needed for authenticated users to get them from Firestore.
+
+---
+
+## 3. Remaining To Implement 🔴
+
+### Product features
+- Real payment integration for Plus and Pro subscriptions + server-verified entitlement updates on purchase.
+- Actual push / local reminder scheduling and notification-permission handling.
+- Fully functional AI Coach (chat, adaptive routines, form analysis, plan recommendations).
+- **Custom workout / plan builder** (assemble a plan from arbitrary exercises — distinct from custom *exercise* creation, which is done).
 - Nutrition tracking.
 - 1-on-1 coaching workflow or integration.
-- Stronger offline and resume testing for active workouts.
-- Device-level QA for Android and iOS.
+
+### Platform & production readiness
 - CI/CD pipeline.
-- Crashlytics or equivalent crash reporting.
-- Production analytics backend.
+- Crash reporting (Crashlytics / Sentry equivalent).
+- Production analytics backend (analytics are currently `console.log` only).
 - Remote Config defaults and safe fallback verification.
 - Firebase App Check.
 - Release smoke checks.
 - User data deletion and compliance flow.
+- Device-level QA for Android and iOS.
 
-## 4. Improvements Needed
+### Quality / hygiene
+- Automated tests for the new features (training lib, XP/gamification, entitlements, repositories) — **intentionally deferred** by the team for now; pure logic was written test-ready.
+- **Fix tab-bar mojibake**: the bottom tab icons render as broken `⏷` glyphs (an encoding/icon issue) and should be replaced with proper icons.
+- Replace console-only analytics with a real pipeline.
 
-The biggest improvement needed is project hygiene: the delivery board and task files are stale. Several epics are marked as not started or incomplete even though the app already implements much of the functionality. The docs should be updated so product, engineering, and QA can trust the roadmap.
+---
 
-Additional improvements:
+## 4. Suggested Next Phases
 
-- Fix mojibake and encoding issues in UI strings, especially broken arrows, checkmarks, and emoji.
-- Resolve the dependency mismatch between `react@19.1.0` and `react-test-renderer@19.2.0`.
-- Remove or ignore generated runtime files such as `expo-dev.log` and temporary launcher scripts if they are not intended to be committed.
-- Add automated tests for auth/session, repositories, workout logging, metrics, and entitlement gating.
-- Replace console-only analytics with a real analytics pipeline.
-- Harden Firestore rules for all expected read/write paths.
-- Validate the full critical path: sign up, onboarding, create plan, start workout, log sets, finish workout, and verify history/progress updates.
+### Phase A — Production readiness
+CI/CD, crash reporting, real analytics, Remote Config, App Check, release smoke checks, data-deletion/compliance.
 
-## Suggested Roadmap Phases
+### Phase B — Monetization
+Payment integration (Plus/Pro), server-side purchase verification, entitlement updates from trusted backend events only, replace the upgrade stub, verify gates across premium templates and AI Coach.
 
-### Phase 1: Stabilize MVP
+### Phase C — Engagement
+Real reminder scheduling + permission handling based on saved preferences, with delivery evidence.
 
-- Update delivery board and task files to match actual implementation status.
-- Fix encoding issues in visible UI strings.
-- Resolve dependency mismatch and document the supported install command.
-- Verify critical user flow end to end on web, Android, and iOS.
-- Add baseline automated tests for auth, repositories, workout completion, and metrics.
+### Phase D — Advanced coaching
+Build the AI Coach beyond the placeholder, adaptive plan recommendations, custom workout/plan builder, then nutrition tracking and coaching workflows.
 
-### Phase 2: Production Readiness
-
-- Harden Firestore rules and validate access boundaries.
-- Add CI/CD, crash reporting, and analytics.
-- Add Remote Config defaults and safe fallback behavior.
-- Add App Check and release smoke testing.
-- Document user data deletion and compliance process.
-
-### Phase 3: Monetization
-
-- Integrate payments for Plus and Pro.
-- Add server-side purchase verification.
-- Update entitlement documents from trusted backend events only.
-- Replace placeholder upgrade toasts with real subscription flows.
-- Verify paywall gates across premium templates and AI Coach.
-
-### Phase 4: Engagement
-
-- Implement real workout reminders.
-- Add notification permission handling.
-- Schedule local or push reminders based on saved preferences.
-- Add reminder delivery evidence and QA coverage.
-
-### Phase 5: Advanced Coaching
-
-- Build the AI Coach beyond the current placeholder.
-- Add adaptive plan recommendations.
-- Add form analysis if supported by the product direction.
-- Add custom workout builder.
-- Expand roadmap items such as nutrition tracking and coaching workflows.
+### Ongoing
+Native device QA of the 3D animations and sharing; backfill automated tests; fix the tab-bar icon glyphs.
