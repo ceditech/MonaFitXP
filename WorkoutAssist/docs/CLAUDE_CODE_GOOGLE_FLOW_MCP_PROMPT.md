@@ -11,17 +11,19 @@ Use the Google Flow Batch Prompt Pack to generate 3D exercise image assets for a
 Place these files in the repo:
 
 1. Markdown reference:
-   - `app/docs/WORKOUTASSIST_GOOGLE_FLOW_BATCH_PROMPT_PACK.md`
+   - `docs/WORKOUTASSIST_GOOGLE_FLOW_BATCH_PROMPT_PACK.md`
 
 2. TypeScript prompt source:
    - `app/src/data/prompts/googleFlowExercisePromptPack.ts`
 
 The TypeScript pack exports:
+
 - `GOOGLE_FLOW_EXERCISE_PROMPTS`
 - `getAllGoogleFlowJobs()`
 - `getPromptByExerciseId(exerciseId, assetType)`
 
 The prompt pack contains:
+
 - 35 exercises
 - 105 prompts
 - storyboard, hero, and muscleCloseup prompts per exercise
@@ -48,13 +50,14 @@ The prompt pack contains:
    - existing scripts/package scripts
 
 2. Place prompt files:
-   - Markdown into `app/docs/`
+   - Markdown into `docs/`
    - TypeScript into `app/src/data/prompts/`
 
 3. Create a script:
    - `app/scripts/generate-exercise-assets-with-google-flow.ts`
 
 The script must:
+
 - import `getAllGoogleFlowJobs()`
 - iterate through all 105 jobs
 - support `--dry-run`
@@ -66,6 +69,7 @@ The script must:
   `app/assets/exercises/generated-3d/manifest.json`
 
 Manifest shape:
+
 ```json
 {
   "generatedAt": "ISO_DATE",
@@ -85,22 +89,25 @@ Manifest shape:
 ```
 
 4. Create an image generation provider interface:
+
 ```ts
 interface ImageGenerationProvider {
   generateImage(params: {
     prompt: string;
-    aspectRatio: '9:16';
-    quality: 'high';
+    aspectRatio: "9:16";
+    quality: "high";
     outputPath: string;
   }): Promise<{ outputPath: string; providerJobId?: string }>;
 }
 ```
 
 Implement:
+
 - `GoogleFlowMcpProvider` when MCP is configured
 - `DryRunProvider` for dry-run and validation
 
 5. Integrate generated assets:
+
 - Create a media resolver such as:
   `getExerciseGeneratedMedia(exerciseId)`
 - Use hero images in Exercise Detail if available
@@ -109,9 +116,10 @@ Implement:
 - Keep existing procedural animations and SVG fallbacks
 
 6. Create delivery artifacts:
-`docs/delivery/artifacts/epic-06-exercise-media/mission-06-01-google-flow-asset-generation/`
+   `docs/delivery/artifacts/epic-06-exercise-media/mission-06-01-google-flow-asset-generation/`
 
 Files:
+
 - `README.md`
 - `implementation-notes.md`
 - `google-flow-mcp-runbook.md`
@@ -120,6 +128,7 @@ Files:
 - `rollback.md`
 
 7. Verification:
+
 - Run dry-run
 - Verify output paths for at least 3 exercises:
   - Barbell Squat
@@ -132,9 +141,9 @@ Files:
 ## Git commit instructions
 
 ```bash
-git checkout -b epic-06/google-flow-exercise-assets
+git status
 
-git add app/docs/WORKOUTASSIST_GOOGLE_FLOW_BATCH_PROMPT_PACK.md app/src/data/prompts/googleFlowExercisePromptPack.ts
+git add docs/WORKOUTASSIST_GOOGLE_FLOW_BATCH_PROMPT_PACK.md app/src/data/prompts/googleFlowExercisePromptPack.ts
 git commit -m "feat(media): add Google Flow exercise prompt pack"
 
 git add app/scripts app/assets/exercises/generated-3d
@@ -150,6 +159,7 @@ git commit -m "docs(delivery): add Google Flow asset generation artifacts"
 ## Final output required
 
 Return:
+
 1. What changed
 2. Exact files created/modified
 3. How to run dry-run
