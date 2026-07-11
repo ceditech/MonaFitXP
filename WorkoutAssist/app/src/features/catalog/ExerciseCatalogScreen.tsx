@@ -9,12 +9,16 @@ import {
     SafeAreaView,
     ActivityIndicator,
     ScrollView,
-    StatusBar
+    StatusBar,
+    Image
 } from 'react-native';
 import { Colors } from '../../shared/ui/Theme';
 import { useWorkoutRepo } from '../../repositories';
+import { useSession } from '../../session/SessionProvider';
 import { Exercise } from '../../data/contracts/IWorkoutRepository';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { getExerciseImage } from '../../data/exerciseImages';
 
 const MUSCLE_GROUPS = [
     'All', 'Quads', 'Glutes', 'Chest', 'Triceps', 'Back',
@@ -33,7 +37,11 @@ const EQUIPMENT_OPTIONS = [
 
 export const ExerciseCatalogScreen = ({ navigation }: any) => {
     const repo = useWorkoutRepo();
+    const { session } = useSession();
+    const uid = session.uid;
     const [exercises, setExercises] = useState<Exercise[]>([]);
+    const [favorites, setFavorites] = useState<string[]>([]);
+    const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -43,19 +51,44 @@ export const ExerciseCatalogScreen = ({ navigation }: any) => {
 
     useEffect(() => {
         console.log('[Analytics] catalog_viewed');
-        loadExercises();
     }, []);
+
+    // Reload on focus so newly created custom exercises appear immediately.
+    useFocusEffect(
+        useCallback(() => {
+            loadExercises();
+        }, [uid])
+    );
 
     const loadExercises = async () => {
         try {
             setLoading(true);
-            const data = await repo.getExercises();
+            const [data, favs] = await Promise.all([
+                uid ? repo.getMergedExercises(uid) : repo.getExercises(),
+                uid ? repo.getFavoriteExerciseIds(uid) : Promise.resolve([]),
+            ]);
             setExercises(data);
+            setFavorites(favs);
         } catch (e) {
             console.error('[ExerciseCatalog] Load error:', e);
             setError('Failed to load exercises');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleToggleFavorite = async (exerciseId: string) => {
+        if (!uid) return;
+        // Optimistic update; repo returns the authoritative list.
+        setFavorites(prev => prev.includes(exerciseId)
+            ? prev.filter(id => id !== exerciseId)
+            : [...prev, exerciseId]);
+        try {
+            const updated = await repo.toggleFavorite(uid, exerciseId);
+            setFavorites(updated);
+            console.log('[Analytics] favorite_toggled', { exerciseId });
+        } catch (e) {
+            console.error('[ExerciseCatalog] toggleFavorite error:', e);
         }
     };
 
@@ -90,9 +123,10 @@ export const ExerciseCatalogScreen = ({ navigation }: any) => {
             const matchesMuscle = !selectedMuscle || ex.muscles.includes(selectedMuscle);
             const matchesEquipment = selectedEquipment.length === 0 ||
                 selectedEquipment.some(eq => ex.equipment.includes(eq));
-            return matchesSearch && matchesMuscle && matchesEquipment;
+            const matchesFavorites = !showFavoritesOnly || favorites.includes(ex.id);
+            return matchesSearch && matchesMuscle && matchesEquipment && matchesFavorites;
         });
-    }, [exercises, debouncedSearch, selectedMuscle, selectedEquipment]);
+    }, [exercises, debouncedSearch, selectedMuscle, selectedEquipment, showFavoritesOnly, favorites]);
 
     const handleOpenExercise = (id: string) => {
         console.log(`[Analytics] exercise_opened: ${id}`);
@@ -106,8 +140,22 @@ export const ExerciseCatalogScreen = ({ navigation }: any) => {
             activeOpacity={0.7}
         >
             <View style={styles.cardContent}>
+                <View style={styles.thumbWrap}>
+                    {getExerciseImage(item.id) ? (
+                        <Image source={getExerciseImage(item.id)!} style={styles.thumb} resizeMode="cover" />
+                    ) : (
+                        <Ionicons name="barbell-outline" size={22} color="rgba(255,255,255,0.25)" />
+                    )}
+                </View>
                 <View style={styles.infoColumn}>
-                    <Text style={styles.exerciseName}>{item.name}</Text>
+                    <View style={styles.nameRow}>
+                        <Text style={styles.exerciseName}>{item.name}</Text>
+                        {item.isCustom && (
+                            <View style={styles.customTag}>
+                                <Text style={styles.customTagText}>CUSTOM</Text>
+                            </View>
+                        )}
+                    </View>
                     <View style={styles.tagRow}>
                         {item.muscles.slice(0, 2).map(m => (
                             <View key={m} style={styles.muscleTag}>
@@ -121,6 +169,17 @@ export const ExerciseCatalogScreen = ({ navigation }: any) => {
                         )}
                     </View>
                 </View>
+                <TouchableOpacity
+                    onPress={() => handleToggleFavorite(item.id)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={styles.starBtn}
+                >
+                    <Ionicons
+                        name={favorites.includes(item.id) ? 'star' : 'star-outline'}
+                        size={20}
+                        color={favorites.includes(item.id) ? Colors.brandOrange : 'rgba(255,255,255,0.3)'}
+                    />
+                </TouchableOpacity>
                 <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
             </View>
         </TouchableOpacity>
@@ -141,6 +200,25 @@ export const ExerciseCatalogScreen = ({ navigation }: any) => {
             <StatusBar barStyle="light-content" />
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Exercise Library</Text>
+                <View style={styles.headerActions}>
+                    <TouchableOpacity
+                        style={[styles.headerBtn, showFavoritesOnly && styles.headerBtnActive]}
+                        onPress={() => setShowFavoritesOnly(v => !v)}
+                    >
+                        <Ionicons
+                            name={showFavoritesOnly ? 'star' : 'star-outline'}
+                            size={18}
+                            color={showFavoritesOnly ? '#fff' : Colors.brandOrange}
+                        />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.headerBtn}
+                        onPress={() => navigation.navigate('CreateCustomExercise')}
+                    >
+                        <Ionicons name="add" size={20} color={Colors.brandPurple} />
+                        <Text style={styles.headerBtnText}>Custom</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <View style={styles.searchContainer}>
@@ -240,11 +318,56 @@ const styles = StyleSheet.create({
     header: {
         paddingHorizontal: 20,
         paddingVertical: 15,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     headerTitle: {
         color: '#fff',
         fontSize: 32,
         fontWeight: '800',
+    },
+    headerActions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    headerBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 12,
+    },
+    headerBtnActive: {
+        backgroundColor: Colors.brandOrange,
+    },
+    headerBtnText: {
+        color: Colors.brandPurple,
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    nameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    customTag: {
+        backgroundColor: 'rgba(142, 36, 170, 0.25)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+        marginBottom: 8,
+    },
+    customTagText: {
+        color: '#C46BFF',
+        fontSize: 9,
+        fontWeight: '900',
+        letterSpacing: 0.5,
+    },
+    starBtn: {
+        marginRight: 8,
     },
     searchContainer: {
         paddingHorizontal: 16,
@@ -307,6 +430,20 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
+    },
+    thumbWrap: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        marginRight: 12,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+    },
+    thumb: {
+        width: 48,
+        height: 48,
     },
     infoColumn: {
         flex: 1,

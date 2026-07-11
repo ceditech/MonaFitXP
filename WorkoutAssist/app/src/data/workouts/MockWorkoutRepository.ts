@@ -12,7 +12,8 @@ import {
     InProgressWorkout,
     WorkoutSessionSet,
     UserMetrics,
-    PersonalRecord
+    PersonalRecord,
+    GamificationState
 } from '../contracts/IWorkoutRepository';
 
 import exerciseCatalog from '../mocks/exerciseCatalog.json';
@@ -32,6 +33,60 @@ export class MockWorkoutRepository implements IWorkoutRepository {
     async getExercise(id: string): Promise<Exercise | null> {
         const exercises = await this.getExercises();
         return exercises.find(e => e.id === id) || null;
+    }
+
+    async getMergedExercises(uid: string): Promise<Exercise[]> {
+        const [catalog, custom] = await Promise.all([
+            this.getExercises(),
+            this.listCustomExercises(uid),
+        ]);
+        return [...catalog, ...custom];
+    }
+
+    async listCustomExercises(uid: string): Promise<Exercise[]> {
+        const key = `${DATA_PREFIX}${uid}_custom_exercises`;
+        if (this.memCache.has(key)) return this.memCache.get(key);
+        try {
+            const stored = await AsyncStorage.getItem(key);
+            const parsed: Exercise[] = stored ? JSON.parse(stored) : [];
+            this.memCache.set(key, parsed);
+            return parsed;
+        } catch {
+            return [];
+        }
+    }
+
+    async createCustomExercise(uid: string, exercise: Omit<Exercise, 'id' | 'isCustom' | 'ownerUid'>): Promise<string> {
+        const key = `${DATA_PREFIX}${uid}_custom_exercises`;
+        const list = await this.listCustomExercises(uid);
+        const id = `custom_${Math.random().toString(36).substr(2, 9)}`;
+        const newExercise: Exercise = { ...exercise, id, isCustom: true, ownerUid: uid };
+        const updated = [...list, newExercise];
+        this.memCache.set(key, updated);
+        await AsyncStorage.setItem(key, JSON.stringify(updated));
+        return id;
+    }
+
+    async deleteCustomExercise(uid: string, exerciseId: string): Promise<void> {
+        const key = `${DATA_PREFIX}${uid}_custom_exercises`;
+        const list = await this.listCustomExercises(uid);
+        const updated = list.filter(e => e.id !== exerciseId);
+        this.memCache.set(key, updated);
+        await AsyncStorage.setItem(key, JSON.stringify(updated));
+    }
+
+    async getFavoriteExerciseIds(uid: string): Promise<string[]> {
+        const profile = await this.getUserProfile(uid);
+        return profile?.favoriteExerciseIds || [];
+    }
+
+    async toggleFavorite(uid: string, exerciseId: string): Promise<string[]> {
+        const current = await this.getFavoriteExerciseIds(uid);
+        const updated = current.includes(exerciseId)
+            ? current.filter(id => id !== exerciseId)
+            : [...current, exerciseId];
+        await this.saveUserProfile(uid, { favoriteExerciseIds: updated });
+        return updated;
     }
 
     async getPlanTemplates(): Promise<PlanTemplate[]> {
@@ -205,6 +260,31 @@ export class MockWorkoutRepository implements IWorkoutRepository {
     async listWorkoutSets(uid: string, workoutId: string): Promise<WorkoutSessionSet[]> {
         const workout = await this.getWorkout(uid, workoutId);
         return workout ? workout.sets : [];
+    }
+
+    async getLastExercisePerformance(uid: string, exerciseId: string): Promise<WorkoutSessionSet[] | null> {
+        // listWorkouts already returns most-recent-first
+        const completed = await this.listWorkouts(uid, { status: 'completed' });
+        for (const workout of completed) {
+            const exerciseSets = (workout.sets || [])
+                .filter(s => s.exerciseId === exerciseId && (s.actualReps || 0) > 0)
+                .sort((a, b) => a.setIndex - b.setIndex);
+            if (exerciseSets.length > 0) {
+                return exerciseSets;
+            }
+        }
+        return null;
+    }
+
+    async getExerciseSetHistory(uid: string, exerciseId: string, maxWorkouts = 20): Promise<WorkoutSessionSet[]> {
+        const completed = await this.listWorkouts(uid, { status: 'completed', limit: maxWorkouts });
+        const all: WorkoutSessionSet[] = [];
+        for (const workout of completed) {
+            all.push(...(workout.sets || [])
+                .filter(s => s.exerciseId === exerciseId && (s.actualReps || 0) > 0)
+                .sort((a, b) => a.setIndex - b.setIndex));
+        }
+        return all;
     }
 
     async saveWorkoutSession(uid: string, session: WorkoutLog): Promise<void> {
@@ -382,6 +462,23 @@ export class MockWorkoutRepository implements IWorkoutRepository {
         };
 
         return defaultMetrics;
+    }
+
+    async getGamification(uid: string): Promise<GamificationState | null> {
+        // Canned mid-progress state so gamification UI is visible in mock mode.
+        return {
+            totalXp: 950,
+            level: 5,
+            lifetimeWorkouts: 12,
+            lifetimeVolume: 14200,
+            lifetimeSets: 96,
+            lifetimePrs: 4,
+            badges: {
+                first_workout: { earnedAt: new Date(Date.now() - 86400000 * 30).toISOString() },
+                consistency_4: { earnedAt: new Date(Date.now() - 86400000 * 12).toISOString() },
+                volume_10k: { earnedAt: new Date(Date.now() - 86400000 * 3).toISOString() },
+            },
+        };
     }
 
     async getEntitlement(uid: string): Promise<{ tier: string }> {

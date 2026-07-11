@@ -11,10 +11,19 @@ import {
     Modal
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { useWorkoutRepo } from '../../repositories';
 import { useSession } from '../../session/SessionProvider';
 import { Colors } from '../../shared/ui/Theme';
 import { InProgressWorkout, PlanTemplate, Exercise, WorkoutSessionSet } from '../../data/contracts/IWorkoutRepository';
+import { useLastPerformance } from './components/useLastPerformance';
+import { SuggestionChip } from './components/SuggestionChip';
+import { WarmupSuggestion } from './components/WarmupSuggestion';
+import { PlateCalcSheet } from './components/PlateCalcSheet';
+import { ExerciseDemo, ExerciseDemoHandle } from '../../lib/motion/components/ExerciseDemo';
+import { RestTimerRing } from '../../lib/motion/components/RestTimerRing';
+import { StaticOrb } from '../../lib/motion/fallbacks/StaticOrb';
+import { inferAnimationKey, isAnimationKey } from '../../lib/motion/mannequin/poses';
 
 export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
     console.log('[WorkoutPlayerScreen] Mounting with params:', route.params);
@@ -29,7 +38,9 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
     const [exercises, setExercises] = useState<Exercise[]>([]);
     const [secondsElapsed, setSecondsElapsed] = useState(0);
     const [restRemaining, setRestRemaining] = useState(0);
+    const [restTotal, setRestTotal] = useState(60);
     const [isResting, setIsResting] = useState(false);
+    const demoRef = useRef<ExerciseDemoHandle>(null);
 
     // Confirmation modal state
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -164,6 +175,17 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
     const currentExercise = exercises.find(e => e.id === currentExerciseId);
     const currentSets = workout?.sets.filter(s => s.exerciseId === currentExerciseId) || [];
 
+    // Training insights (last performance → suggestion + warm-ups). Optional & silent.
+    const { lastSets } = useLastPerformance(uid, currentExerciseId);
+    const [prefill, setPrefill] = useState<{ weight: number; reps: number } | null>(null);
+    const [plateCalcWeight, setPlateCalcWeight] = useState<number | null>(null);
+    const anySetCompleted = currentSets.some(s => !!s.completedAt);
+
+    // Clear any applied suggestion when the exercise changes.
+    useEffect(() => {
+        setPrefill(null);
+    }, [currentExerciseId]);
+
     const handleLogSet = async (setIndex: number, actualReps: number, actualWeight: number) => {
         if (!uid || !workout) return;
 
@@ -190,12 +212,17 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
 
         console.log('[Analytics] set_logged', { exerciseId: currentExerciseId });
 
+        // Demo-character pulse — 'pr' when this beats the last known top weight.
+        const lastTopWeight = lastSets?.reduce((max, s) => Math.max(max, s.actualWeight || 0), 0) || 0;
+        demoRef.current?.pulse(lastTopWeight > 0 && actualWeight > lastTopWeight ? 'pr' : 'normal');
+
         // Trigger Rest Timer
         startRest();
     };
 
     const startRest = (duration = 60) => {
         setRestRemaining(duration);
+        setRestTotal(duration);
         setIsResting(true);
         console.log('[Analytics] rest_started');
 
@@ -329,13 +356,32 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
                         </Text>
                     </View>
 
+                    {/* 3D form demo of the current exercise */}
+                    <ExerciseDemo
+                        ref={demoRef}
+                        animationKey={isAnimationKey(currentExercise?.media?.animationKey)
+                            ? currentExercise!.media!.animationKey!
+                            : inferAnimationKey(currentExercise?.name || '')}
+                        height={230}
+                        fallback={<StaticOrb height={230} />}
+                    />
+
+                    {/* Training insights */}
+                    <SuggestionChip
+                        lastSets={lastSets}
+                        onApply={(weight, reps) => setPrefill({ weight, reps })}
+                    />
+                    <WarmupSuggestion lastSets={lastSets} anySetCompleted={anySetCompleted} />
+
                     {/* Sets List */}
                     <View style={styles.setsList}>
                         {currentSets.map((set, idx) => (
                             <SetLoggerRow
                                 key={`${set.exerciseId}-${set.setIndex}`}
                                 set={set}
+                                prefill={prefill}
                                 onLog={(reps, weight) => handleLogSet(idx, reps, weight)}
+                                onOpenPlateCalc={(weight) => setPlateCalcWeight(weight)}
                             />
                         ))}
                     </View>
@@ -368,7 +414,12 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
                 <View style={styles.restOverlay}>
                     <View style={styles.restCard}>
                         <Text style={styles.restTitle}>Resting</Text>
-                        <Text style={styles.restTimer}>{restRemaining}s</Text>
+                        <View style={styles.restRingWrap}>
+                            <RestTimerRing progress={Math.min(restRemaining / restTotal, 1)} size={200} />
+                            <View style={styles.restTimerOverlay}>
+                                <Text style={styles.restTimer}>{restRemaining}s</Text>
+                            </View>
+                        </View>
                         <View style={styles.restActions}>
                             <TouchableOpacity style={styles.restBtn} onPress={() => setRestRemaining(prev => prev + 15)}>
                                 <Text style={styles.restBtnText}>+15s</Text>
@@ -380,6 +431,13 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
                     </View>
                 </View>
             )}
+
+            {/* Plate Calculator */}
+            <PlateCalcSheet
+                visible={plateCalcWeight !== null}
+                targetWeight={plateCalcWeight ?? 0}
+                onClose={() => setPlateCalcWeight(null)}
+            />
 
             {/* Confirmation Modal */}
             <Modal
@@ -421,10 +479,25 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
     );
 };
 
-const SetLoggerRow = ({ set, onLog }: { set: WorkoutSessionSet, onLog: (reps: number, weight: number) => void }) => {
+interface SetLoggerRowProps {
+    set: WorkoutSessionSet;
+    prefill: { weight: number; reps: number } | null;
+    onLog: (reps: number, weight: number) => void;
+    onOpenPlateCalc: (weight: number) => void;
+}
+
+const SetLoggerRow = ({ set, prefill, onLog, onOpenPlateCalc }: SetLoggerRowProps) => {
     const [reps, setReps] = useState(set.actualReps?.toString() || set.targetReps.toString());
     const [weight, setWeight] = useState(set.actualWeight?.toString() || '0');
     const isCompleted = !!set.completedAt;
+
+    // Apply a tapped suggestion to sets that haven't been logged yet.
+    useEffect(() => {
+        if (prefill && !isCompleted) {
+            setWeight(prefill.weight.toString());
+            setReps(prefill.reps.toString());
+        }
+    }, [prefill, isCompleted]);
 
     return (
         <View style={[styles.setRow, isCompleted && styles.setRowCompleted]}>
@@ -439,6 +512,12 @@ const SetLoggerRow = ({ set, onLog }: { set: WorkoutSessionSet, onLog: (reps: nu
                     placeholder="kg"
                     editable={!isCompleted}
                 />
+                <TouchableOpacity
+                    onPress={() => onOpenPlateCalc(parseFloat(weight) || 0)}
+                    hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                >
+                    <Ionicons name="barbell-outline" size={16} color="rgba(255,255,255,0.35)" />
+                </TouchableOpacity>
                 <Text style={styles.setLabel}>kg</Text>
             </View>
 
@@ -632,11 +711,22 @@ const styles = StyleSheet.create({
         letterSpacing: 2,
         marginBottom: 16,
     },
+    restRingWrap: {
+        width: 200,
+        height: 200,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 32,
+    },
+    restTimerOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     restTimer: {
         color: '#fff',
-        fontSize: 80,
+        fontSize: 56,
         fontWeight: '900',
-        marginBottom: 32,
     },
     restActions: {
         flexDirection: 'row',

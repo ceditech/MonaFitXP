@@ -10,6 +10,9 @@ firebase-debug.*.log*
 # Firebase cache
 .firebase/
 
+# Flux/BFL generated image output (review artifacts, not committed)
+flux-output/
+
 # Firebase Service Account Key
 secrets/
 **/serviceAccountKey*.json
@@ -71,3 +74,6 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Blender render intermediate frames (rebuildable from art/blender/*.blend)
+art/renders/*_png/

@@ -22,6 +22,7 @@ import { WorkoutHistoryScreen } from '../../features/history/WorkoutHistoryScree
 import { WorkoutPlayerScreen } from '../../features/workout/WorkoutPlayerScreen';
 import { WorkoutSummaryScreen } from '../../features/workout/WorkoutSummaryScreen';
 import { ExerciseDetailScreen } from '../../features/catalog/ExerciseDetailScreen';
+import { CreateCustomExerciseScreen } from '../../features/catalog/CreateCustomExerciseScreen';
 import { PlanTemplateDetailScreen } from '../../features/plans/PlanTemplateDetailScreen';
 import { CreatePlanScreen } from '../../features/plans/CreatePlanScreen';
 import { WorkoutDetailScreen } from '../../features/history/WorkoutDetailScreen';
@@ -78,6 +79,7 @@ const MainNavigator = () => {
                 <MainStack.Screen name="PlanTemplateDetail" component={PlanTemplateDetailScreen} />
                 <MainStack.Screen name="CreatePlan" component={CreatePlanScreen} />
                 <MainStack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} />
+                <MainStack.Screen name="CreateCustomExercise" component={CreateCustomExerciseScreen} />
                 <MainStack.Screen name="WorkoutDetail" component={WorkoutDetailScreen} />
                 <MainStack.Screen name="ProgressDashboard" component={ProgressDashboardScreen} />
                 <MainStack.Screen name="Settings" component={SettingsScreen} />

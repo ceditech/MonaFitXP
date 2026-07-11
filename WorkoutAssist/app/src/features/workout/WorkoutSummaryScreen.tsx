@@ -1,10 +1,16 @@
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { Colors } from '../../shared/ui/Theme';
 import { useWorkoutRepo } from '../../repositories';
 import { useSession } from '../../session/SessionProvider';
-import { InProgressWorkout, WorkoutSessionSet } from '../../data/contracts/IWorkoutRepository';
+import { InProgressWorkout, WorkoutSessionSet, GamificationState } from '../../data/contracts/IWorkoutRepository';
+import { XpGainedCard } from '../gamification/XpGainedCard';
+import { CelebrationBurst, CelebrationBurstHandle } from '../../lib/motion/components/CelebrationBurst';
+import { ShareableSummaryCard } from './components/ShareableSummaryCard';
+import { shareCard } from '../../lib/share/shareCard';
+import { buildShareCardData } from '../../lib/share/shareCard.types';
+import { Ionicons } from '@expo/vector-icons';
 
 export const WorkoutSummaryScreen = ({ route, navigation }: any) => {
     console.log('[WorkoutSummaryScreen] Mounting with params:', route.params);
@@ -17,6 +23,56 @@ export const WorkoutSummaryScreen = ({ route, navigation }: any) => {
     const [workout, setWorkout] = useState<InProgressWorkout | null>(null);
     const [exercises, setExercises] = useState<Record<string, any>>({});
     const [error, setError] = useState<string | null>(null);
+    const [gamification, setGamification] = useState<GamificationState | null>(null);
+    const [sharing, setSharing] = useState(false);
+    const burstRef = useRef<CelebrationBurstHandle>(null);
+    const shareCardRef = useRef<View>(null);
+
+    const handleShare = async () => {
+        if (!workout || !summary || sharing) return;
+        setSharing(true);
+        try {
+            const cardData = buildShareCardData({ workout, summary, gamification });
+            const shared = await shareCard(shareCardRef, cardData);
+            if (shared) console.log('[Analytics] summary_shared', { workoutId });
+        } catch (e) {
+            console.error('[WorkoutSummary] share error:', e);
+        } finally {
+            setSharing(false);
+        }
+    };
+
+    // The XP award is written asynchronously by the Cloud Function after
+    // completion. Poll a few times, then silently give up (metrics-only UX).
+    useEffect(() => {
+        if (!uid || !workoutId) return;
+        let cancelled = false;
+        let attempts = 0;
+        const MAX_ATTEMPTS = 4;
+
+        const poll = async () => {
+            attempts++;
+            try {
+                const g = await repo.getGamification(uid);
+                if (cancelled) return;
+                const award = g?.lastAward;
+                if (g && award && award.workoutId === workoutId) {
+                    setGamification(g);
+                    // PR burst when the server confirmed new PRs this workout.
+                    if ((award.breakdown?.prs || 0) > 0) {
+                        burstRef.current?.burst('pr');
+                    }
+                    return;
+                }
+            } catch { /* silent */ }
+            if (!cancelled && attempts < MAX_ATTEMPTS) {
+                setTimeout(poll, 2000);
+            }
+        };
+        poll();
+
+        return () => { cancelled = true; };
+    }, [uid, workoutId, repo]);
 
     const formatDuration = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -154,11 +210,26 @@ export const WorkoutSummaryScreen = ({ route, navigation }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            {/* Celebration particles (visual garnish only, never blocks) */}
+            <CelebrationBurst ref={burstRef} autoBurst="finish" height={300} />
+
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
                     <Text style={styles.title}>Workout Complete!</Text>
                     <Text style={styles.workoutName}>{workout.name}</Text>
                 </View>
+
+                {/* XP award (appears when the server finishes computing) */}
+                {gamification?.lastAward && (
+                    <XpGainedCard
+                        award={gamification.lastAward}
+                        totalXp={gamification.totalXp}
+                        onLevelUp={(level) => {
+                            console.log('[Analytics] level_up', { level });
+                            burstRef.current?.burst('levelUp');
+                        }}
+                    />
+                )}
 
                 {summary && (
                     <>
@@ -196,6 +267,21 @@ export const WorkoutSummaryScreen = ({ route, navigation }: any) => {
 
                 <View style={styles.footer}>
                     <TouchableOpacity
+                        style={styles.shareBtn}
+                        onPress={handleShare}
+                        disabled={sharing}
+                    >
+                        {sharing
+                            ? <ActivityIndicator color="#fff" size="small" />
+                            : (
+                                <>
+                                    <Ionicons name="share-social" size={18} color="#fff" />
+                                    <Text style={styles.shareBtnText}>Share Workout</Text>
+                                </>
+                            )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
                         style={styles.doneBtn}
                         onPress={() => navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'WorkoutHistory' } })}
                     >
@@ -210,6 +296,16 @@ export const WorkoutSummaryScreen = ({ route, navigation }: any) => {
                     </TouchableOpacity>
                 </View>
             </ScrollView>
+
+            {/* Off-screen capture target for native sharing (view-shot). */}
+            {workout && summary && (
+                <View style={styles.offscreenCard} pointerEvents="none">
+                    <ShareableSummaryCard
+                        ref={shareCardRef}
+                        data={buildShareCardData({ workout, summary, gamification })}
+                    />
+                </View>
+            )}
         </SafeAreaView>
     );
 };
@@ -218,6 +314,27 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.brandDarkBlue,
+    },
+    shareBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: 'rgba(255, 122, 41, 0.9)',
+        borderRadius: 16,
+        paddingVertical: 16,
+        marginBottom: 12,
+    },
+    shareBtnText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '800',
+    },
+    offscreenCard: {
+        position: 'absolute',
+        top: -9999,
+        left: 0,
+        opacity: 0,
     },
     centered: {
         flex: 1,

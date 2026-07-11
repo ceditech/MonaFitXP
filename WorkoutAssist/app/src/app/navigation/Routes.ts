@@ -25,6 +25,7 @@ export type MainStackParamList = {
     CreatePlan: undefined;
     // Catalog
     ExerciseDetail: { exerciseId: string };
+    CreateCustomExercise: undefined;
     // Workout
     WorkoutPlayer: { planId?: string };
     WorkoutSummary: { workoutId: string };

@@ -4,7 +4,9 @@
     "private": true,
     "description": "WorkoutAssist monorepo root",
     "scripts": {
-        "seed": "node scripts/seed-firestore.js"
+        "seed": "node scripts/seed-firestore.js",
+        "flux": "node scripts/flux-generate.js",
+        "flux:map": "node scripts/gen-exercise-images-map.js"
     },
     "devDependencies": {
         "firebase-admin": "^13.0.1"
