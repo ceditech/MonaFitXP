@@ -18,8 +18,10 @@ import { Exercise } from '../../data/contracts/IWorkoutRepository';
 import { Ionicons } from '@expo/vector-icons';
 import { MuscleDiagram } from './components/MuscleDiagram';
 import { ExerciseDemo } from '../../lib/motion/components/ExerciseDemo';
+import { VideoDemo } from './components/VideoDemo';
 import { inferAnimationKey, isAnimationKey } from '../../lib/motion/mannequin/poses';
 import { getExerciseImage } from '../../data/exerciseImages';
+import { getExerciseVideo } from '../../data/exerciseVideos';
 
 export const ExerciseDetailScreen = ({ route, navigation }: any) => {
     const { exerciseId } = route.params || {};
@@ -103,6 +105,13 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
         );
     }
 
+    // Demo hero source: pre-rendered mocap video when one exists for this
+    // movement, otherwise the live 3D scene (which has its own fallbacks).
+    const animationKey = isAnimationKey(exercise.media?.animationKey)
+        ? exercise.media!.animationKey!
+        : inferAnimationKey(exercise.name);
+    const demoVideo = getExerciseVideo(animationKey);
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" />
@@ -125,13 +134,14 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
                         style={styles.hero}
                     >
                         <View style={styles.demoBadge}>
-                            <Ionicons name="cube-outline" size={12} color={Colors.brandOrange} />
-                            <Text style={styles.demoBadgeText}>3D FORM DEMO</Text>
+                            <Ionicons name={demoVideo ? 'videocam-outline' : 'cube-outline'} size={12} color={Colors.brandOrange} />
+                            <Text style={styles.demoBadgeText}>{demoVideo ? 'FORM DEMO' : '3D FORM DEMO'}</Text>
                         </View>
+                        {demoVideo ? (
+                            <VideoDemo source={demoVideo} height={320} />
+                        ) : (
                         <ExerciseDemo
-                            animationKey={isAnimationKey(exercise.media?.animationKey)
-                                ? exercise.media!.animationKey!
-                                : inferAnimationKey(exercise.name)}
+                            animationKey={animationKey}
                             height={320}
                             fallback={
                                 getExerciseImage(exercise.id) ? (
@@ -143,14 +153,14 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
                                 ) : (
                                     <View style={styles.demoFallback}>
                                         <MuscleDiagram
-                                            primary={exercise.muscleDiagram?.primary
-                                                || (exercise.primaryMuscleGroup ? [exercise.primaryMuscleGroup] : [])}
+                                            primary={exercise.muscleDiagram?.primary || exercise.muscles || []}
                                             secondary={exercise.muscleDiagram?.secondary || []}
                                         />
                                     </View>
                                 )
                             }
                         />
+                        )}
                         {/* Meta chips floating over the hero bottom */}
                         <View style={styles.heroChips}>
                             {exercise.difficulty && (
@@ -170,8 +180,7 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
                     <Text style={styles.sectionTitle}>Targets</Text>
                     <View style={styles.targetsCard}>
                         <MuscleDiagram
-                            primary={exercise.muscleDiagram?.primary
-                                || (exercise.primaryMuscleGroup ? [exercise.primaryMuscleGroup] : [])}
+                            primary={exercise.muscleDiagram?.primary || exercise.muscles || []}
                             secondary={exercise.muscleDiagram?.secondary || []}
                         />
                         <View style={styles.chipCloud}>

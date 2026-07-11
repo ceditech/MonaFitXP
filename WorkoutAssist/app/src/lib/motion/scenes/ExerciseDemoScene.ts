@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import { MotivatorScene } from './types';
 import { MannequinRig } from '../mannequin/MannequinRig';
 import { CLIPS, AnimationKey, isAnimationKey } from '../mannequin/poses';
+import { hasExerciseGlb, loadExerciseGlb, disposeGlb } from '../mannequin/loadExerciseGlb';
 
 const PURPLE = 0x8e24aa;
 const ORANGE = 0xff7a29;
@@ -30,8 +31,21 @@ export class ExerciseDemoScene implements MotivatorScene {
     private elapsed = 0;
     private currentKey: AnimationKey | null = null;
 
+    // Rigged-GLB path: loaded lazily per exercise that has a real 3D asset.
+    // The procedural rig stays the live fallback until (and if) the GLB is
+    // ready, so any load failure leaves the demo fully working.
+    private sceneRef!: THREE.Scene;
+    private mixer: THREE.AnimationMixer | null = null;
+    private glbRoot: THREE.Object3D | null = null;
+    private glbKey: AnimationKey | null = null;
+    private glbMaterial: THREE.MeshStandardMaterial | null = null;
+    private glbLoading = false;
+    private glbActive = false;
+    private disposed = false;
+
     init(scene: THREE.Scene, camera: THREE.PerspectiveCamera): void {
         this.camera = camera;
+        this.sceneRef = scene;
         camera.position.set(0, 0.9, 2.85);
         camera.lookAt(0, 0.72, 0);
 
@@ -68,6 +82,7 @@ export class ExerciseDemoScene implements MotivatorScene {
     }
 
     tick(dt: number): void {
+        this.mixer?.update(dt);
         this.elapsed += dt;
         // Gentle camera orbit (±18°) so the movement reads in 3D.
         const angle = Math.sin(this.elapsed * 0.35) * 0.32;
@@ -92,6 +107,18 @@ export class ExerciseDemoScene implements MotivatorScene {
         if (key === this.currentKey) return;
         this.currentKey = key;
 
+        // Prefer a rigged GLB when one exists for this exercise; otherwise
+        // (or until it loads) the procedural timeline below drives the demo.
+        // Show the GLB only when the loaded asset matches this exercise;
+        // any other case (loading, no asset, a not-yet-cached GLB) shows the
+        // procedural rig.
+        if (hasExerciseGlb(key)) {
+            this.ensureGlb(key);
+            this.setGlbVisible(this.glbKey === key);
+        } else {
+            this.setGlbVisible(false);
+        }
+
         this.clipTl?.kill();
         const clip = CLIPS[key];
         const tl = gsap.timeline({ repeat: -1, yoyo: !!clip.yoyo, repeatDelay: 0.05 });
@@ -106,9 +133,49 @@ export class ExerciseDemoScene implements MotivatorScene {
         this.clipTl = tl;
     }
 
+    /** Load the exercise's rigged GLB once, then reveal it via the mixer. */
+    private ensureGlb(key: AnimationKey): void {
+        // One rigged asset per scene instance for now (only `squat` ships a
+        // GLB). Adding more exercises' GLBs means caching per key + swapping.
+        if (this.glbRoot || this.glbLoading) return;
+        this.glbLoading = true;
+        loadExerciseGlb(key)
+            .then(({ root, clip }) => {
+                this.glbLoading = false;
+                if (this.disposed) { disposeGlb(root); return; }
+                this.glbKey = key;
+                root.position.y = 0;   // feet rest on the platform
+                root.visible = false;
+                this.glbRoot = root;
+                this.sceneRef.add(root);
+                root.traverse(obj => {
+                    const mesh = obj as THREE.Mesh;
+                    if ((mesh as unknown as { isMesh?: boolean }).isMesh && !this.glbMaterial) {
+                        this.glbMaterial = mesh.material as THREE.MeshStandardMaterial;
+                    }
+                });
+                if (clip) {
+                    this.mixer = new THREE.AnimationMixer(root);
+                    this.mixer.clipAction(clip).play();
+                }
+                // Reveal only if the demo is still showing this exercise.
+                if (this.currentKey === key) {
+                    this.setGlbVisible(true);
+                }
+            })
+            .catch(() => { this.glbLoading = false; /* keep procedural rig */ });
+    }
+
+    /** Swap between the rigged GLB and the procedural rig. */
+    private setGlbVisible(on: boolean): void {
+        this.glbActive = on && !!this.glbRoot;
+        if (this.glbRoot) this.glbRoot.visible = this.glbActive;
+        this.rig.root.visible = !this.glbActive;
+    }
+
     /** Set-logged feedback: body glow (green on PR) + brief tempo boost. */
     private pulse(isPr: boolean): void {
-        const material = this.rig.bodyMaterial;
+        const material = this.glbActive && this.glbMaterial ? this.glbMaterial : this.rig.bodyMaterial;
         const flash = new THREE.Color(isPr ? SUCCESS : ORANGE);
         const base = new THREE.Color(PURPLE);
 
@@ -132,8 +199,17 @@ export class ExerciseDemoScene implements MotivatorScene {
     }
 
     dispose(): void {
+        this.disposed = true;
         this.clipTl?.kill();
         this.pulseTl?.kill();
+        this.mixer?.stopAllAction();
+        this.mixer = null;
+        if (this.glbRoot) {
+            this.glbRoot.parent?.remove(this.glbRoot);
+            disposeGlb(this.glbRoot);
+            this.glbRoot = null;
+        }
+        this.glbMaterial = null;
         this.rig.dispose();
         this.platform.geometry.dispose();
         this.platformMaterial.dispose();
