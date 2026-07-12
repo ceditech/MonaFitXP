@@ -22,6 +22,7 @@ import { VideoDemo } from './components/VideoDemo';
 import { inferAnimationKey, isAnimationKey } from '../../lib/motion/mannequin/poses';
 import { getExerciseImage } from '../../data/exerciseImages';
 import { getExerciseVideo } from '../../data/exerciseVideos';
+import { getExerciseMuscleArt } from '../../data/exerciseMuscleArt';
 
 export const ExerciseDetailScreen = ({ route, navigation }: any) => {
     const { exerciseId } = route.params || {};
@@ -106,11 +107,12 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
     }
 
     // Demo hero source: pre-rendered mocap video when one exists for this
-    // movement, otherwise the live 3D scene (which has its own fallbacks).
+    // exact exercise, otherwise the live 3D scene (which has its own fallbacks).
     const animationKey = isAnimationKey(exercise.media?.animationKey)
         ? exercise.media!.animationKey!
         : inferAnimationKey(exercise.name);
-    const demoVideo = getExerciseVideo(animationKey);
+    const demoVideo = getExerciseVideo(exercise.id);
+    const muscleArt = getExerciseMuscleArt(exercise.id);
 
     return (
         <SafeAreaView style={styles.container}>
@@ -179,10 +181,16 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Targets</Text>
                     <View style={styles.targetsCard}>
-                        <MuscleDiagram
-                            primary={exercise.muscleDiagram?.primary || exercise.muscles || []}
-                            secondary={exercise.muscleDiagram?.secondary || []}
-                        />
+                        {muscleArt ? (
+                            <View style={styles.muscleArt}>
+                                <Image source={muscleArt} style={styles.muscleArtImage} resizeMode="contain" />
+                            </View>
+                        ) : (
+                            <MuscleDiagram
+                                primary={exercise.muscleDiagram?.primary || exercise.muscles || []}
+                                secondary={exercise.muscleDiagram?.secondary || []}
+                            />
+                        )}
                         <View style={styles.chipCloud}>
                             {exercise.muscles.map(m => (
                                 <View key={m} style={styles.muscleChip}>
@@ -302,6 +310,16 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'center',
         gap: 8,
+    },
+    muscleArt: {
+        width: '100%',
+        aspectRatio: 1,
+        borderRadius: 16,
+        overflow: 'hidden',
+    },
+    muscleArtImage: {
+        width: '100%',
+        height: '100%',
     },
     targetsCard: {
         backgroundColor: 'rgba(255,255,255,0.04)',
