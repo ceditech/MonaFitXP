@@ -11,10 +11,16 @@
  * Phase 3 bundles these locally; at scale they move to CDN + cache.
  */
 const VIDEO_BY_EXERCISE_ID: Record<string, number> = {
-    ex_001: require('../../assets/videos/squat-demo.mp4'),   // Barbell Squat
-    ex_008: require('../../assets/videos/pushup-demo.mp4'),  // Push Up
-    ex_009: require('../../assets/videos/plank-demo.mp4'),   // Plank
-    ex_020: require('../../assets/videos/burpee-demo.mp4'),  // Burpee
+    ex_001: require('../../assets/videos/squat-demo.mp4'),    // Barbell Squat (mocap)
+    ex_003: require('../../assets/videos/deadlift-demo.mp4'), // Deadlift (posed + AI interpolated)
+    ex_004: require('../../assets/videos/ohp-demo.mp4'),      // Overhead Press (posed + AI interpolated)
+    ex_006: require('../../assets/videos/row-demo.mp4'),      // Dumbbell Row (posed + AI interpolated)
+    ex_007: require('../../assets/videos/lunge-demo.mp4'),    // Lunge (posed + AI interpolated)
+    ex_008: require('../../assets/videos/pushup-demo.mp4'),   // Push Up (mocap)
+    ex_009: require('../../assets/videos/plank-demo.mp4'),    // Plank (mocap)
+    ex_010: require('../../assets/videos/curl-demo.mp4'),     // Bicep Curl (posed + AI interpolated)
+    ex_016: require('../../assets/videos/calfraise-demo.mp4'),// Calf Raise (posed + AI interpolated)
+    ex_020: require('../../assets/videos/burpee-demo.mp4'),   // Burpee (mocap)
 };
 
 export function getExerciseVideo(exerciseId: string): number | null {
