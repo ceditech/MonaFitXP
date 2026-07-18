@@ -1,7 +1,7 @@
 # WorkoutAssist / MonaFitXP — Pre-Deployment & Launch Checklist
 
 _A living checklist of what must be verified before shipping to production. Keep it updated as items are completed or added._
-_Last updated: 2026-07-10._
+_Last updated: 2026-07-18._
 
 **Status legend:** `[ ]` not started · `[~]` partial / in progress · `[x]` done.
 This reflects the real state of the codebase — not aspirational planning.
@@ -74,7 +74,7 @@ This reflects the real state of the codebase — not aspirational planning.
 ## 7. Testing & QA
 
 - [x] Unit tests green: app **97/97**, functions **36/36**; `tsc` clean.
-- [ ] **Native device QA (iOS + Android)** — the 3D exercise animations (expo-gl), share sheet, and full workout flow have only been verified on **web**.
+- [ ] **Native device QA (iOS + Android)** — the 3D exercise animations (expo-gl), `expo-video` demo playback, the exercise-detail carousel, share sheet, and full workout flow have only been verified on **web**. ⚠️ **Largest untested surface in the product.** The carousel's container measurement has a native code path (`.measure()`) that has never run on a device.
 - [ ] Backfill tests for new features (training lib, XP/gamification, entitlements, repositories, share-card) — intentionally deferred; pure logic was written test-ready.
 - [ ] End-to-end critical path on all platforms: sign up → onboarding → create plan → start workout → log sets → finish → verify history/progress/XP.
 - [ ] Offline & resume testing for active workouts.
@@ -93,7 +93,9 @@ This reflects the real state of the codebase — not aspirational planning.
 
 - [x] Three.js lazy-chunked (kept out of the initial web bundle); pixel ratio clamped; SVG/reduce-motion fallbacks.
 - [x] Exercise hero images bundled as JPEGs (`app/assets/exercises/`, ~7.4MB / 35 images).
-- [ ] **🔖 CHECKPOINT — Migrate exercise art to Firebase Storage** (see §12 for full detail & triggers).
+- [x] Demo videos bundled (`app/assets/videos/`, **3.8MB / 15 files**, 720×720 H.264); only the active carousel page mounts a player.
+- [x] Muscle infographics bundled (`app/assets/muscles/`, **1.7MB / 20 files**).
+- [ ] **🔖 CHECKPOINT — Migrate exercise art + video to Firebase Storage** (see §12). ⚠️ **Bundled media is now ~12.9MB** (7.4 art + 3.8 video + 1.7 infographics) against a documented ~15–20MB trigger — **this is now the closest-to-due deferred item.** Adding the 15 proposed exercises or more videos would cross it.
 - [ ] Measure production bundle size (native binary + web initial load); set budgets.
 - [ ] Image/asset optimization pass if bundle grows.
 - [ ] Verify `react@19.1.0` / dependency alignment holds for the production install.
@@ -108,13 +110,16 @@ This reflects the real state of the codebase — not aspirational planning.
 ## 11. Content & Data
 
 - [x] 20 exercises with full instructions + Pro Tips + animation keys + hero images.
+- [x] Demo videos on **15 of 20** exercises; muscle infographics on **all 20**. The 5 machine exercises (Leg Press, Lat Pulldown, Seated Row, Face Pull, Hamstring Curl) are infographic-only **by deliberate product decision** — not a gap.
+- [ ] Bench Press demo video is stylistically inconsistent with the other 14 (cinematic close-up on dark vs. wide shot on the branded stage). Anatomically correct as of 2026-07-18; cosmetic polish only.
 - [ ] Decide launch scope for the 15 **proposed** exercises (data + images staged but not in the live catalog).
 - [ ] Plan templates reviewed for correctness and difficulty.
 - [ ] AI Coach: ship a real experience or hide behind a flag (currently a static placeholder).
 
 ## 12. Known Issues & Cleanup
 
-- [ ] **Tab-bar mojibake** — bottom tab icons render as broken `⏷` glyphs; replace with proper icons.
+- [ ] **Tab-bar icons missing** — `RootNavigator.tsx` defines only `title` for each `Tab.Screen` and **no `tabBarIcon`**, so the bar falls back to placeholder/mojibake glyphs. Root cause confirmed 2026-07-18; fix is to add `tabBarIcon` (Ionicons are already a dependency). Small, high-visibility win.
+- [ ] **`onLayout` is unreliable on react-native-web 0.21 in this app** (does not fire at mount or on resize). Any container measurement must use ref + `getBoundingClientRect` (web) / `.measure()` (native) — the pattern established in `ExerciseDetailScreen`. Do not "simplify" it back to `onLayout`/`useWindowDimensions`; that was the cause of the Jul-18 carousel overflow regression.
 - [ ] Remove/ignore any generated runtime files not meant to be committed.
 - [ ] `flux-output/` (dev image scratch) is gitignored — confirm it stays out of releases.
 

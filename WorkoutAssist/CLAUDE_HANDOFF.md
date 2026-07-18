@@ -1,53 +1,57 @@
 # Claude Handoff — WorkoutAssist / MonaFitXP
 
-_Last updated: 2026-07-14. Written at ~84% context in the session that built the mocap-video pipeline, muscle infographics, and the exercise-detail carousel. Read this first in a new session, then pull the referenced memory files for full detail._
+_Last updated: 2026-07-18. Read this first in a new session, then pull the referenced memory files for full detail._
 
 ## Where things stand
 
-**Visual-upgrade project (Phases 1–3) is largely shipped and verified live.** The exercise demo went from a blocky procedural mannequin to: (a) rigged GLB fallback, (b) muscle-colored anatomical infographics on **all 20 exercises**, (c) pre-rendered demo videos on **14 of 20 exercises**, (d) a working swipe/chevron carousel across the whole catalog on the detail screen.
+**The visual-upgrade project (Phases 1–3) is complete, committed, and verified live on web.** The exercise demo went from a blocky procedural mannequin to:
+- **demo videos on 15 of 20 exercises** (3.8 MB bundled),
+- **muscle infographics on all 20** (1.7 MB),
+- a **swipe/chevron carousel** across the whole catalog on the detail screen,
+- a hardened fallback chain: **video → 3D GLB/procedural → poster → SVG diagram**.
 
-Full narrative history — architecture decisions, every gotcha, exact tool params — lives in Claude's memory system (not this file, to avoid duplication):
-- `rigged-glb-demos.md` — original Blender GLB pipeline (superseded by video for the exercises that have one, still the fallback)
-- `mocap-video-pipeline.md` — **the main log**, Mixamo→Blender + fal/Seedance/Kling video pipeline, every round of fixes, exact model params
-- `bash-env-split.md` — Bash tool ≠ user's real terminal for AppData/global caches (Playwright, npm -g, etc.) — matters if touching the Mixamo MCP again
+**There is no parked decision anymore.** The Bench Press question from the previous handoff is resolved (see below). Working tree is clean through commit `c4aeecb`.
+
+Full narrative history — architecture decisions, every gotcha, exact tool params — lives in Claude's memory system (not duplicated here):
+- `mocap-video-pipeline.md` — **the main log**: Mixamo→Blender + fal/Seedance/Kling pipeline, every round of fixes, exact model params
+- `rigged-glb-demos.md` — the Blender GLB pipeline (still the fallback for exercises without a video)
+- `rnweb-onlayout-unreliable.md` — **read before any layout/measurement work** (see Gotchas)
+- `bash-env-split.md` — Bash tool ≠ the user's real terminal for AppData/global caches (matters if touching the Mixamo MCP)
 - `competitive-features-2026-07.md` — the broader Jul 2026 feature build this sits inside
 
-## ⚠️ One decision is parked — needs the user
+## Recently resolved (Jul 18)
 
-**Bench Press has no shipped video.** Three Kling generations, each with a different flaw:
-- v1/v2: consistent with the app's stage style, but the AI inflated the barbell plates to comic size and the head hangs slightly off the bench pad.
-- v3: gorgeous cinematic close-up, correct plate sizes, head properly on the pad — but the camera moves and the style diverges from every other demo, plus a head-melt artifact near the bench edge in one frame.
+**1. Carousel layout regression (was breaking every exercise).** Pages were sized from `useWindowDimensions()` — the *window* — so whenever the window ≠ the carousel container, every page overflowed ~3×: the video hero rendered as a black slice and the muscle art spilled off-screen. **Fixed** by measuring the container directly (ref + `getBoundingClientRect`), with window width only as a first-frame fallback. Verified at 320/375/500 px, on resize, and through chevron paging.
 
-Files exist for all three attempts (`art/fal/bench-kling*.mp4`), start frame at `C:/tmp/bench_start4.png` (may not survive a machine restart — regenerable from `art/blender/squat-video-stage-v2.blend` bench pose if needed), Blender scene has the `Bench` prop built.
+**2. Bench Press video — shipped, then regenerated properly.** v3 was shipped first, but it had two defects that the old notes hadn't captured: it opened with ~1.5 s of the character standing beside the **plyo box** before lying down, and its muscle coloring was on the **legs** (it had been generated from `bench_start4.png`, a standing-by-box frame with the squat/box color set). **Fixed** by recoloring a clean top-of-press frame with `fal-ai/nano-banana-pro/edit` (cyan pectorals; violet delts/triceps/serratus; legs cleared) and re-looping it through Kling v3 — no box, correct muscles, no head-melt artifact. Now `benchpress-demo.mp4` (347 KB).
 
-**Ask the user which way to go before touching this again:**
-1. Ship v3 (best single-clip quality, breaks visual consistency)
-2. Ship v2 (consistent, visibly flawed plates)
-3. More re-rolls (Seedance instead of Kling, or another Kling prompt)
-4. Defer — leave bench on its infographic + 3D-fallback only (my standing recommendation, not yet confirmed)
+## Verified-working state
 
-## Working tree state (uncommitted — nothing has been committed this whole project)
+- `npx jest` → **11/11 suites, 97/97 tests**; `tsc --noEmit` clean.
+- Web preview (`expo start --web` via `.claude/launch.json` config `expo-web`) drives cleanly: video playback, infographics, and the carousel across multiple exercises with no console errors.
+- **Native (Android/iOS) is still entirely unverified** — see next steps.
 
-Modified: `app/jest.setup.js`, `app/src/data/exerciseVideos.ts`, `app/src/features/catalog/ExerciseDetailScreen.tsx`, `app/src/features/catalog/components/VideoDemo.tsx`
-Untracked (expected, not stray): `app/assets/videos/*.mp4` (14 files), `app/assets/muscles/*.jpg` (20 files), `art/fal/*.mp4` + `*.png` (generation history/backups), `art/mixamo/*.fbx`, `art/blender/*.blend`, `art/renders/*_png/` (gitignored intermediate frames — safe).
+## Immediate next steps (priority order)
 
-**Nothing has been committed in this whole multi-session project.** If starting fresh, check with the user before any `git add`/`git commit` — confirm what should actually go in vs. stay as local working files (e.g. the `art/` source tree is arguably not meant for the app repo history, that's a call for the user).
+1. **Native (Android/iOS) smoke test** — the single largest untested surface. GLB rendering, `expo-video` playback, expo-gl, the share sheet, and the carousel have only ever run on web.
+2. **Plan the media → Firebase Storage / CDN migration.** Bundled media is now ~12.9 MB (7.4 art + 3.8 video + 1.7 infographics); the documented trigger is ~15–20 MB, so this is coming due. Do it during production-readiness when Storage rules are set up anyway — not during feature work.
+3. **Production readiness** (nothing exists yet): CI/CD, crash reporting, real analytics, App Check, Remote Config, data-deletion flow.
+4. **Quick win:** tab-bar icons — `RootNavigator.tsx` sets only `title` per `Tab.Screen`, no `tabBarIcon`, so the bar shows placeholder/mojibake glyphs.
 
-## Verified-working state (as of last check)
+See `docs/APP_FEATURES.md` (reconciled 2026-07-18) for the full A/B/C/D breakdown of implemented / in-progress / remaining / needs-improvement.
 
-- Typecheck clean, `npx jest` → **11/11 suites, 97/97 tests** passing (fixed a previously-silent App-suite failure by mocking `expo-video`/`expo` in `jest.setup.js`)
-- Web preview (`expo start --web` via `.claude/launch.json` config `expo-web`) drives cleanly; verified live: video playback, muscle infographics, and the new carousel (swipe + chevrons) across multiple exercises with zero console errors
+## Gotchas — do not regress these
 
-## Immediate next steps (in likely priority order)
+- **`onLayout` does NOT fire reliably on react-native-web 0.21 here** (neither at mount nor on resize). Measure containers with a ref + `getBoundingClientRect` (web) / `.measure()` (native) and a `resize` listener. This is what makes the carousel correct — don't "simplify" it back to `onLayout` or `useWindowDimensions`.
+- **Video registry is keyed by exercise ID, not `animationKey`.** Several exercises share an animation key, so key-based lookup showed the wrong movement (Leg Press played the squat video).
+- **Carousel uses a plain paged `ScrollView`, not `FlatList`** — RN-web's virtualized list resets scroll offset to 0 on any re-render. Active-page tracking lives in a ref + pub/sub bus, never parent state, for the same reason. Chevron `scrollTo` must be `animated: false` (CSS scroll-snap cancels smooth scrolling).
+- **Only the active carousel page mounts a video/GL demo** — keep it that way; stacking GL contexts or autoplaying videos will tank the screen.
+- **Blender prop attachment**: props use a `COPY_LOCATION` constraint with `head_tail=0.6` (palm center) and no rotation inheritance. Do **not** use `Child Of` on a hand bone — it puts props at the wrist and twists them with IK.
+- **Screen every generated video at 3+ frames including mid-rep** before encoding. Two-frame checks have missed real defects twice (the bench box-intro shipped this way).
 
-1. **Resolve the Bench Press decision above with the user.**
-2. Native (Android/iOS) smoke test — everything so far has only been verified on web preview. GLB rendering, video playback, and IK/GL paths are unverified on-device.
-3. Consider CDN migration for the video/image assets if the bundle grows further (currently ~3.5 MB video + 1.7 MB images — still fine to bundle, but was flagged as a future concern in `mocap-video-pipeline.md`).
-4. The 5 machine exercises (Leg Press, Lat Pulldown, Seated Row, Face Pull, Hamstring Curl) + none of Box Jump's siblings remain infographic-only by deliberate design (poor video ROI) — not a bug, don't "fix" without discussing.
+## Key reusable assets
 
-## Key reusable assets if extending the pipeline further
-
-- `art/blender/seedance-posing-stage.blend` — the full posing rig: character + barbell + dumbbells + pull-up bar + bench + plyo box props, all IK-grip-corrected. Reuse this to pose any new exercise rather than rebuilding.
-- Prop-attachment pattern (**important — don't regress**): props use `COPY_LOCATION` constraint with `head_tail=0.6` (palm center) and no rotation inheritance. Do NOT use `Child Of` directly to a hand bone — earlier attempts put dumbbells at the wrist and they twisted wildly with IK.
-- Video-generation model choice: **Kling v3 (`fal-ai/kling-video/v3/pro/image-to-video`) beats Seedance for prompt adherence on arm/limb constraints** — use Kling by default for controlled-motion exercises.
-- Screening rule: check 3+ frames (including mid-rep) of every generated video before encoding — 2 frames missed real defects earlier in this project.
+- `art/blender/seedance-posing-stage.blend` — the posing rig (character + barbell + dumbbells + pull-up bar + props, IK-grip-corrected). **Note:** it currently sits in the Dumbbell Row pose and contains no bench or box objects; the bench-press lying pose is *not* saved anywhere.
+- **Cheapest fix for wrong muscle coloring on an existing demo:** recolor one frame with `fal-ai/nano-banana-pro/edit` (pass `image_urls` as an **array** — a single `image_url` 422s) and re-loop via Kling v3 with the same frame as start *and* end. Far cheaper than re-posing in Blender when a good pose already exists in a prior render.
+- **Model choice:** Kling v3 (`fal-ai/kling-video/v3/pro/image-to-video`) beats Seedance for prompt adherence on limb constraints.
+- **ffmpeg** lives at `~/mcp-tools/mixamo-mcp/.venv/.../imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe` (there is no system ffmpeg). App encode recipe: `-vf scale=720:720 -c:v libx264 -profile:v high -pix_fmt yuv420p -crf 20 -an -movflags +faststart`.
