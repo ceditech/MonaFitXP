@@ -24,6 +24,26 @@ const makeFirebaseModuleMock = (overrides = {}) => {
   );
 };
 
+// Mock expo-video — its native module isn't available in the jest env
+// (App transitively imports it via ExerciseDetailScreen → VideoDemo).
+jest.mock('expo-video', () => ({
+  __esModule: true,
+  useVideoPlayer: jest.fn(() => ({
+    loop: false,
+    muted: false,
+    playing: false,
+    status: 'idle',
+    play: jest.fn(),
+    pause: jest.fn(),
+  })),
+  VideoView: () => null,
+}));
+// `useEvent` from expo drives VideoDemo's status tracking.
+jest.mock('expo', () => ({
+  __esModule: true,
+  useEvent: jest.fn(() => ({ status: 'idle' })),
+}));
+
 jest.mock('firebase/app', () => makeFirebaseModuleMock({ initializeApp: jest.fn(() => ({})) }));
 jest.mock('firebase/auth', () =>
   makeFirebaseModuleMock({

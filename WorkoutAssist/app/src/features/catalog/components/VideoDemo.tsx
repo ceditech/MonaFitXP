@@ -31,6 +31,20 @@ export const VideoDemo = ({ source, height = 320 }: VideoDemoProps) => {
         }
     }, [status, player]);
 
+    // Belt-and-braces for carousel page swaps: when the component mounts
+    // mid-swipe, both the setup play() and the readyToPlay replay can land
+    // while the element is still hidden and get dropped. Retry until playing.
+    useEffect(() => {
+        const timer = setInterval(() => {
+            if (player.playing) {
+                clearInterval(timer);
+                return;
+            }
+            try { player.play(); } catch { /* not ready yet */ }
+        }, 600);
+        return () => clearInterval(timer);
+    }, [player]);
+
     return (
         <VideoView
             player={player}
