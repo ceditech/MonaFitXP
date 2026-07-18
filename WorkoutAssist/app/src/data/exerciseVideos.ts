@@ -12,6 +12,7 @@
  */
 const VIDEO_BY_EXERCISE_ID: Record<string, number> = {
     ex_001: require('../../assets/videos/squat-demo.mp4'),    // Barbell Squat (mocap)
+    ex_002: require('../../assets/videos/benchpress-demo.mp4'),// Bench Press (posed + Kling, cinematic v3)
     ex_003: require('../../assets/videos/deadlift-demo.mp4'), // Deadlift (posed + AI interpolated)
     ex_004: require('../../assets/videos/ohp-demo.mp4'),      // Overhead Press (posed + AI interpolated)
     ex_005: require('../../assets/videos/pullup-demo.mp4'),   // Pull Up (posed + AI interpolated)
