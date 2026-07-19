@@ -7,6 +7,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSession } from '../../session/SessionProvider';
 import { View, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 // Screens
 import { WelcomeScreen } from '../../features/auth/WelcomeScreen';
@@ -50,11 +51,33 @@ const AuthNavigator = () => (
     </AuthStack.Navigator>
 );
 
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+/**
+ * Bottom-tab icons, as [focused, unfocused] Ionicons names.
+ * Without an explicit `tabBarIcon` React Navigation renders a placeholder glyph,
+ * which showed up as the broken tab-bar characters. Keyed by route name so
+ * adding a tab is a one-line change here.
+ */
+const TAB_ICONS: Record<keyof MainTabParamList, readonly [IoniconName, IoniconName]> = {
+    HomeToday: ['today', 'today-outline'],
+    PlanTemplates: ['clipboard', 'clipboard-outline'],
+    ExerciseCatalog: ['barbell', 'barbell-outline'],
+    WorkoutHistory: ['time', 'time-outline'],
+    AICoach: ['sparkles', 'sparkles-outline'],
+};
+
 const TabNavigator = () => (
-    <Tab.Navigator screenOptions={{
+    <Tab.Navigator screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: Colors.primary,
-    }}>
+        tabBarIcon: ({ color, size, focused }) => {
+            const pair = TAB_ICONS[route.name as keyof MainTabParamList];
+            // Unknown route → fall back to a neutral dot rather than crashing.
+            const name: IoniconName = pair ? (focused ? pair[0] : pair[1]) : 'ellipse-outline';
+            return <Ionicons name={name} size={size} color={color} />;
+        },
+    })}>
         <Tab.Screen name="HomeToday" component={HomeTodayScreen} options={{ title: 'Today' }} />
         <Tab.Screen name="PlanTemplates" component={PlanTemplatesScreen} options={{ title: 'Plans' }} />
         <Tab.Screen name="ExerciseCatalog" component={ExerciseCatalogScreen} options={{ title: 'Exercises' }} />
