@@ -42,7 +42,7 @@ Full narrative history — architecture decisions, every gotcha, exact tool para
 - `npx jest` → **11/11 suites, 97/97 tests**; `tsc --noEmit` clean.
 - **Web**: video playback, infographics, and the carousel drive cleanly with no console errors.
 - **Android (emulator, dev build, Jul 19)** — verified live: Welcome → guest → Home, **tab-bar icons** (all 5 distinct, active tinted), **expo-video** playback (squat + regenerated bench press), the **carousel including its native `.measure()` path** and chevron paging, **expo-gl/three.js** 3D demos, and the id-keyed video registry (Leg Press correctly shows 3D, not the squat video).
-- **Still unverified on device: the share sheet** (`react-native-view-shot`) — needs a completed-workout summary to reach. **iOS remains entirely unverified** (no macOS host).
+- **Full workout loop verified on Android**: Start Workout → set logging → rest-timer overlay → Finish Workout → Summary → **Share Workout** (branded card captured via `react-native-view-shot`, handed to the Android share sheet by `expo-sharing`). **iOS remains entirely unverified** (no macOS host), and Android has only run on an emulator, not physical hardware.
 
 ## Building natively on this machine (Windows) — prerequisites
 
@@ -55,7 +55,7 @@ Native builds fail without these; see `native-android-setup.md` for the full dia
 
 ## Immediate next steps (priority order)
 
-1. **Close out the share sheet** — the last unverified native subsystem. Requires a full workout → summary flow on device.
+1. **iOS bring-up** (needs a macOS host) and Android QA on **physical hardware** — the remaining native gaps. Re-verifying Android needs only Metro + `adb reverse tcp:8081 tcp:8081`; the APK persists across emulator restarts, so no rebuild/`subst`/Gradle.
 2. **Plan the media → Firebase Storage / CDN migration.** Bundled media is ~12.9 MB (7.4 art + 3.8 video + 1.7 infographics); the documented trigger is ~15–20 MB, so this is coming due. Do it during production-readiness when Storage rules are set up anyway — not during feature work.
 3. **Production readiness** (nothing exists yet): CI/CD, crash reporting, real analytics, App Check, Remote Config, data-deletion flow.
 4. **Upgrade or replace `expo-three@8.0.0`** to remove the dependency-override workarounds.
