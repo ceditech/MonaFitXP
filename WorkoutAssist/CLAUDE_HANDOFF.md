@@ -10,7 +10,7 @@ _Last updated: 2026-07-19. Read this first in a new session, then pull the refer
 - a **swipe/chevron carousel** across the whole catalog on the detail screen,
 - a hardened fallback chain: **video → 3D GLB/procedural → poster → SVG diagram**.
 
-**As of Jul 19 the app also RUNS ON ANDROID for the first time** — see "Native is now working" below. There is no parked decision. Working tree is clean through commit `26416ab`.
+**As of Jul 19 the app also RUNS ON ANDROID for the first time** — see "Native is now working" below. One **non-blocking product decision is parked**: whether the demo videos should also play inside the Workout Player, which today deliberately uses the interactive 3D scene instead (full rationale + trade-offs in `docs/APP_FEATURES.md` §D "PARKED PRODUCT DECISION"). Not a bug — do not "fix" it without a product call.
 
 Full narrative history — architecture decisions, every gotcha, exact tool params — lives in Claude's memory system (not duplicated here):
 - `mocap-video-pipeline.md` — **the main log**: Mixamo→Blender + fal/Seedance/Kling pipeline, every round of fixes, exact model params
