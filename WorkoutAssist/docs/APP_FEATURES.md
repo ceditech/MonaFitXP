@@ -5,7 +5,7 @@ _Last reconciled with the codebase: 2026-07-18._
 This document reflects the **actual** state of the code, not aspirational planning.
 Status legend: ✅ Completed · 🟡 In progress / partial · 🔴 Not started · 🔧 Works, needs improvement.
 
-**Verified at this reconciliation:** `npx jest` → 11 suites / 97 tests passing · `tsc --noEmit` clean · working tree clean (all visual-upgrade work committed through `c4aeecb`) · 15 demo videos + 20 muscle infographics present on disk and registered.
+**Verified at this reconciliation:** `npx jest` → 11 suites / 97 tests passing · `tsc --noEmit` clean · working tree clean (through `26416ab`) · 15 demo videos + 20 muscle infographics present on disk and registered · **the app builds and runs on an Android emulator** (first time, Jul 19 — see §1.9).
 
 ---
 
@@ -70,6 +70,19 @@ Status legend: ✅ Completed · 🟡 In progress / partial · 🔴 Not started �
 - Demo hero fallback chain: **video → 3D GLB/procedural scene → poster image → SVG muscle diagram**, so a missing asset never breaks the screen.
 - **Carousel layout regression fixed (Jul 18)**: pages were sized from `useWindowDimensions()` (the *window*), which overflowed ~3× whenever the window ≠ the carousel container. Now the container is measured directly via ref + `getBoundingClientRect` (RN-web's `onLayout`/ResizeObserver does not fire reliably in this build), with window width as a first-frame fallback.
 
+### 1.9 Native Android brought up & verified (Jul 19, 2026) — **new since last reconciliation**
+
+**The app now builds and runs on Android for the first time.** It previously could not: the project was **scaffolded as a plain React Native app** with Expo layered on top, so the native projects were never Expo-compatible. Web was unaffected (it never touches them), which is why web-only verification never surfaced it. Four independent blockers, each masked by the previous — all fixed:
+
+1. **`android/` + `ios/` were RN CLI template output** — no Expo autolinking in `settings.gradle`, so `expo/android/build.gradle` couldn't resolve `ExpoModuleExtension`. Regenerated via `expo prebuild --clean`, after adding `android.package` to `app.json` (missing — without it prebuild invents a new applicationId and changes app identity). Same origin story explains the old `react-native run-android` scripts and the `org.reactjs.native.example.*` iOS bundle id.
+2. **Dependency hoisting installed SDK-incompatible Expo native modules** — `expo-file-system@13.2.1` (SDK-44 era; its `build.gradle` uses the `maven` plugin removed in Gradle 7 → build failure) and `expo-font@57` (calls `getDirectConverter()`, absent from `expo-modules-core@3.x` → **startup crash**). Both pinned with `overrides` in `package.json` to `expo/bundledNativeModules.json` values. `expo install --fix` does not fix these — they are transitive.
+3. **`babel.config.js` used the bare RN preset**; `babel-preset-expo` was not installed. Expo's `winter` polyfills were mis-compiled with `@babel/runtime` helpers, emitting a bare `require()` into the Metro prelude → every launch died with `ReferenceError: Property 'require' doesn't exist`.
+4. **Firebase auth was web-only** (`getAuth` + `browserLocalPersistence`) → `onAuthStateChanged` never fired on device, so `SessionProvider.isLoading` never cleared and the app hung on the loading spinner forever. Fixed with a `src/firebase/firebase.native.ts` platform split (`initializeAuth` + AsyncStorage persistence); the web entry point is untouched.
+
+**Also shipped:** bottom **tab-bar icons** (`RootNavigator.tsx` previously defined only `title` and no `tabBarIcon`, producing the placeholder/mojibake glyphs) — now a typed `TAB_ICONS` map, filled when focused / outline otherwise.
+
+**Verified live on an Android 16 emulator (dev build):** Welcome → guest → Home; tab icons (all 5 distinct, active tinted); `expo-video` playback (squat + regenerated bench press); the exercise-detail carousel **including its native `.measure()` path** and chevron paging; `expo-gl`/three.js 3D demos; and the id-keyed video registry (Leg Press correctly shows the 3D demo rather than the squat video).
+
 ---
 
 ## B. In Progress / Partial 🟡
@@ -77,7 +90,7 @@ Status legend: ✅ Completed · 🟡 In progress / partial · 🔴 Not started �
 - **Monetization** — Paywall UI, all three tiers, entitlement provider, and Plus/Pro gating are live, and the entitlement doc is secured for server-only writes. **Missing:** real payment integration (`UpgradeScreen` logs *"Stripe flow coming soon"*; `PaywallScreen` shows *"Coming soon! Payment integration pending."*) and a server-side purchase-verification function. No payment SDK is installed.
 - **AI Coach** — routed and Pro-gated, but `AICoachScreen.tsx` (120 lines) is still a **static placeholder** (`chatPlaceholder`, no chat, no logic).
 - **Notifications** — preference UI and persisted preference fields exist, but there is **no scheduling or permission handling**; `expo-notifications` is still **not installed**.
-- **Native (Android / iOS) verification** — the 3D scenes, demo videos, share sheet, and the new carousel have been verified on **web only**. Native device/emulator smoke testing is pending. This is the single largest untested surface.
+- **Native verification** — **Android is now verified** on an emulator (see §1.9). Two gaps remain: the **share sheet** (`react-native-view-shot`) is the one untested subsystem (it needs a completed-workout summary to reach), and **iOS is entirely unverified** — the native project was regenerated by prebuild but never built, and there is no macOS host available. Android has also only run on an **emulator**, not physical hardware.
 - **Firestore re-seed** — enriched exercise fields are in the local seed file (so guest/mock users have them); a `npm run seed` re-seed is needed for authenticated users.
 
 ---
@@ -115,7 +128,9 @@ Things that are **shipped and functional** but carry known debt, cost, or qualit
 - Videos and infographics are **bundled**, so updating art requires an app release.
 
 ### Platform / technical debt
-- **Tab-bar icons are missing** — `RootNavigator.tsx` defines only `title` for each `Tab.Screen`, no `tabBarIcon`, so the bar falls back to placeholder/mojibake glyphs. Small, high-visibility polish item.
+- **`expo-three@8.0.0` is the root of the dependency overrides** — it pins SDK-44-era Expo packages, forcing the `expo-file-system` / `expo-font` pins in `package.json`. Upgrading or replacing it (it is the only consumer of `expo-gl` + three bridging) would remove that workaround. Its helper packages (`@expo/browser-polyfill`, `expo-asset-utils`) were written against the old FileSystem API, so **watch the 3D demo on native after any change here**.
+- **The native projects are prebuild output and should be treated as generated.** `expo prebuild --clean` regenerates them wholesale, and it **deletes `android/local.properties`** (gitignored, holds `sdk.dir`) every time. Any hand-edit to `android/` will be lost on the next prebuild — put config in `app.json` / config plugins instead.
+- **Windows build prerequisites are non-obvious** — `MAX_PATH` requires a `subst` drive (or long-paths enabled), and McAfee's firewall blocks Java's NIO `Selector.open()`, breaking Gradle entirely. Documented in `CLAUDE_HANDOFF.md`; a fresh clone on another machine will not hit the McAfee issue but will still hit `MAX_PATH` if the path is deep.
 - **`onLayout` is unreliable on react-native-web 0.21** in this app (does not fire at mount or on resize). Any future container measurement must use the ref + `getBoundingClientRect` pattern established in `ExerciseDetailScreen`. Documented so it is not rediscovered the hard way.
 - **Analytics are console-only** — the event call sites exist and are well-placed, so swapping in a real pipeline is a contained change, but nothing is currently collected.
 - **Carousel mounts all pages** (only the active one mounts heavy media). Fine at 20 exercises; revisit windowing if the catalog grows substantially, since RN-web's virtualized list resets scroll offset on re-render (the reason `FlatList` was rejected).
@@ -141,4 +156,4 @@ Real reminder scheduling + permission handling based on saved preferences, with 
 Build the AI Coach beyond the placeholder, adaptive plan recommendations, custom workout/plan builder, then nutrition tracking and coaching workflows.
 
 ### Ongoing / quick wins
-Native device QA (largest untested surface) · tab-bar icons · backfill automated tests · Bench Press video style polish.
+Close out the **share sheet** on device (last unverified native subsystem) · **iOS** bring-up (needs a macOS host) · Android QA on **physical hardware** · upgrade/replace `expo-three@8` to drop the dependency overrides · backfill automated tests · Bench Press video style polish.

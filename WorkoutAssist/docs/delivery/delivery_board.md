@@ -1,6 +1,6 @@
 # DELIVERY BOARD
 
-_Board status reconciled with the codebase: 2026-07-18._
+_Board status reconciled with the codebase: 2026-07-19._
 
 > **Note on this board:** it was authored as an artifact-first planning template before implementation began. The MVP was subsequently built without the formal artifact/evidence gates, so the **Status** column below now reflects *implementation reality*, while the **Primary Artifacts / Evidence** columns remain largely unfilled — that governance debt is real and is tracked in `docs/PREDEPLOYMENT_LAUNCH_CHECK.md`. Treat "MVP Built" as "code is live and working on web" — **not** as "passed the Definition of Done", which still requires evidence capture, rules audit, and native QA.
 
@@ -43,7 +43,8 @@ _Board status reconciled with the codebase: 2026-07-18._
 | **P0.6** | History + Progress | P0 | ✅ MVP Built | [x] History Schema<br>[x] Summary Func | Med | Data, Arch | Log View Screenshot | Dev | Tech Lead | Server-side streak/volume/PR/XP aggregation |
 | **P0.7** | Notifications | P0 | 🔴 Not Started | [ ] FCM Setup<br>[ ] Trigger Logic | Low | Security, QA | Push Receipt Screen | Dev | Product | **Prefs UI only — `expo-notifications` not installed** |
 | **P0.8** | Entitlements + Paywall | P0 | 🟡 Partial | [ ] RC Defaults<br>[x] Gate Logic | High | Security, Release | Paywall Flow Video | Tech Lead | Architect | Tiers + gating + server-only entitlement writes live. **No payment provider; upgrade is a stub** |
-| **P1.0** | Exercise Demo Media | P1 | ✅ MVP Built | [x] Video Pipeline<br>[x] Fallback Chain | Low | QA, Arch | Detail-screen recording | Dev | Product | 15/20 videos, 20/20 infographics, detail carousel. **Web-verified only; ~12.9 MB bundled** |
+| **P1.0** | Exercise Demo Media | P1 | ✅ MVP Built | [x] Video Pipeline<br>[x] Fallback Chain | Low | QA, Arch | Detail-screen recording | Dev | Product | 15/20 videos, 20/20 infographics, detail carousel. Verified on web **and Android emulator**; ~12.9 MB bundled |
+| **P1.1** | Native Android Bring-Up | P1 | ✅ MVP Built | [x] Expo prebuild<br>[ ] Build runbook | Low | Arch, QA | Emulator screenshots | Dev | Tech Lead | Project had been scaffolded as plain RN; 4 blockers fixed (autolinking, dep hoisting, babel preset, Firebase auth). **iOS + share sheet still unverified** |
 
 ## Section 4 — Epic Cards
 
@@ -160,5 +161,5 @@ _Reconciled 2026-07-18. The authoritative, more detailed version is `docs/PREDEP
 - [ ] **Config**: Remote Config defaults confirmed (safe fallback).
 - [ ] **Offline**: App does not crash when airplane mode is on.
 - [ ] **Compliance**: User data deletion flow exists (or manual process documented).
-- [ ] **Smoke**: Critical path (Auth → Workout → History) tested on device — **web-verified only; no native run yet**.
+- [~] **Smoke**: Critical path (Auth → Workout → History) tested on device — the app now **runs on an Android emulator** and Auth → Home → Catalog → Exercise Detail is verified there; the full workout→summary leg (and therefore the share sheet) is still only web-verified. iOS unverified.
 - [x] **Tests**: `tsc --noEmit` clean; app suite 11/11 · 97/97 green (newer features intentionally not yet covered).

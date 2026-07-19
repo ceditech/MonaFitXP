@@ -1,7 +1,7 @@
 # WorkoutAssist / MonaFitXP — Pre-Deployment & Launch Checklist
 
 _A living checklist of what must be verified before shipping to production. Keep it updated as items are completed or added._
-_Last updated: 2026-07-18._
+_Last updated: 2026-07-19._
 
 **Status legend:** `[ ]` not started · `[~]` partial / in progress · `[x]` done.
 This reflects the real state of the codebase — not aspirational planning.
@@ -74,7 +74,8 @@ This reflects the real state of the codebase — not aspirational planning.
 ## 7. Testing & QA
 
 - [x] Unit tests green: app **97/97**, functions **36/36**; `tsc` clean.
-- [ ] **Native device QA (iOS + Android)** — the 3D exercise animations (expo-gl), `expo-video` demo playback, the exercise-detail carousel, share sheet, and full workout flow have only been verified on **web**. ⚠️ **Largest untested surface in the product.** The carousel's container measurement has a native code path (`.measure()`) that has never run on a device.
+- [~] **Native device QA (iOS + Android)** — **Android now verified on an emulator (2026-07-19)**: expo-gl 3D demos, `expo-video` playback, the exercise-detail carousel *including its native `.measure()` path*, tab icons, and search all confirmed working. Getting there required fixing four structural blockers (the project had been scaffolded as plain React Native, not Expo — see `CLAUDE_HANDOFF.md` §"Native is now working"). **Remaining:** the **share sheet** (`react-native-view-shot`, needs a completed-workout summary), **physical-device** Android QA, and **iOS entirely** (no macOS host).
+- [ ] **Native build prerequisites on Windows** — `MAX_PATH` needs a `subst` drive or `LongPathsEnabled`; McAfee's firewall blocks Java's NIO `Selector.open()` and breaks Gradle outright; `expo prebuild --clean` deletes `android/local.properties`. Document these in onboarding before another dev tries to build.
 - [ ] Backfill tests for new features (training lib, XP/gamification, entitlements, repositories, share-card) — intentionally deferred; pure logic was written test-ready.
 - [ ] End-to-end critical path on all platforms: sign up → onboarding → create plan → start workout → log sets → finish → verify history/progress/XP.
 - [ ] Offline & resume testing for active workouts.
@@ -118,7 +119,8 @@ This reflects the real state of the codebase — not aspirational planning.
 
 ## 12. Known Issues & Cleanup
 
-- [ ] **Tab-bar icons missing** — `RootNavigator.tsx` defines only `title` for each `Tab.Screen` and **no `tabBarIcon`**, so the bar falls back to placeholder/mojibake glyphs. Root cause confirmed 2026-07-18; fix is to add `tabBarIcon` (Ionicons are already a dependency). Small, high-visibility win.
+- [x] **Tab-bar icons** — root cause was no `tabBarIcon` at all in `RootNavigator.tsx` (only `title`), so React Navigation rendered placeholder glyphs. Fixed 2026-07-19 with a typed `TAB_ICONS` map (Ionicons, filled when focused); verified on web **and** on the Android emulator.
+- [ ] **Dependency overrides are a workaround, not a fix** — `package.json` pins `expo-file-system` and `expo-font` because `expo-three@8.0.0` and `@expo/vector-icons` hoist SDK-incompatible versions. Upgrading/replacing `expo-three` would remove the need; until then, do not delete the `overrides` block (native build breaks, then crashes at startup).
 - [ ] **`onLayout` is unreliable on react-native-web 0.21 in this app** (does not fire at mount or on resize). Any container measurement must use ref + `getBoundingClientRect` (web) / `.measure()` (native) — the pattern established in `ExerciseDetailScreen`. Do not "simplify" it back to `onLayout`/`useWindowDimensions`; that was the cause of the Jul-18 carousel overflow regression.
 - [ ] Remove/ignore any generated runtime files not meant to be committed.
 - [ ] `flux-output/` (dev image scratch) is gitignored — confirm it stays out of releases.
