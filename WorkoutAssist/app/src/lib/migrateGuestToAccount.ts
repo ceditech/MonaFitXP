@@ -5,7 +5,6 @@ import {
     Firestore
 } from 'firebase/firestore';
 import * as GuestStore from './guestStore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DEBUG_MIGRATION = true;
 const BATCH_SIZE = 450;
@@ -88,10 +87,21 @@ export async function migrateGuestWorkoutsToUser({
             }
         }
 
-        // Migrate Metrics as well
-        if (!dryRun && guestId) {
-            await migrateGuestMetrics(guestId, uid, firestore);
-        }
+        // NOTE: metrics are deliberately NOT migrated from the client.
+        //
+        // `users/{uid}/metrics/**` is `allow write: if false` in firestore.rules
+        // (server-only, anti-cheat), so a client write there always fails — the
+        // previous `migrateGuestMetrics()` helper could only ever swallow a
+        // permission-denied error and log a warning.
+        //
+        // It is also unnecessary: `onWorkoutCompleted` is an onWrite trigger on
+        // `users/{uid}/workouts/{workoutId}`, which is exactly what the batch
+        // above writes. Guest workouts carry `status: 'completed'`, so each
+        // migrated doc fires the trigger and the server recomputes summary,
+        // PRs, streak and XP/gamification from the real workout data.
+        //
+        // Trusting client-supplied XP/streak here would reopen the anti-cheat
+        // hole the rules exist to close. Do not re-add it.
 
         if (DEBUG_MIGRATION) {
             console.info(`[Migration] Successfully ${dryRun ? 'previewed' : 'migrated'} ${migratedCount} workouts.`);
@@ -119,27 +129,5 @@ export async function migrateGuestWorkoutsToUser({
         });
 
         throw error;
-    }
-}
-
-/**
- * Helper to migrate metrics from AsyncStorage to Firestore
- */
-async function migrateGuestMetrics(guestId: string, uid: string, firestore: Firestore) {
-    const metricsKey = `WA_DATA_${guestId}_metrics`;
-    try {
-        const stored = await AsyncStorage.getItem(metricsKey);
-        if (stored) {
-            const metrics = JSON.parse(stored);
-            const metricsRef = doc(firestore, `users/${uid}/metrics/current`);
-            await writeBatch(firestore).set(metricsRef, {
-                ...metrics,
-                migratedFromGuestId: guestId,
-                updatedAt: serverTimestamp()
-            }, { merge: true }).commit();
-            if (DEBUG_MIGRATION) console.log('[Migration] Metrics migrated');
-        }
-    } catch (e) {
-        console.warn('[Migration] Failed to migrate metrics', e);
     }
 }
