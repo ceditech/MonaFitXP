@@ -145,7 +145,7 @@ Things that are **shipped and functional** but carry known debt, cost, or qualit
 ## E. Suggested Next Phases
 
 ### Phase A — Production readiness
-CI/CD, crash reporting, real analytics, Remote Config, App Check, release smoke checks, data-deletion/compliance. Fold the **media → Storage/CDN migration** in here (§D) while Storage rules are being set up anyway.
+CI/CD, crash reporting, real analytics, Remote Config, App Check, release smoke checks, data-deletion/compliance. **⛔ $0-budget constraint (Jul 2026): free tiers only until revenue** — the media → Storage/CDN migration is deferred to after first revenue, and iOS/EAS/paid tooling are "when revenue exists" upgrades (Android + web PWA first).
 
 ### Phase B — Monetization
 Payment integration (Plus/Pro), server-side purchase verification, entitlement updates from trusted backend events only, replace the upgrade stub, verify gates across premium templates and AI Coach.

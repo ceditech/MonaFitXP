@@ -66,7 +66,7 @@ This reflects the real state of the codebase — not aspirational planning.
 ## 6. CI/CD & Release
 
 - [ ] CI pipeline: install, `tsc --noEmit`, `jest` (app + functions), lint on every PR.
-- [ ] Automated builds via EAS Build (iOS + Android) and web deploy.
+- [ ] Automated builds — **local Android builds only until revenue** ($0 budget; EAS cloud builds and Apple's $99/yr are "when revenue exists" upgrades). Web deploy via a free tier (Firebase Hosting free / Cloudflare Pages).
 - [ ] EAS Update (OTA) channel strategy defined (prod/staging).
 - [ ] Release smoke-test checklist run against a production build before promotion.
 - [ ] Versioning / build numbers automated.
@@ -96,7 +96,7 @@ This reflects the real state of the codebase — not aspirational planning.
 - [x] Exercise hero images bundled as JPEGs (`app/assets/exercises/`, ~7.4MB / 35 images).
 - [x] Demo videos bundled (`app/assets/videos/`, **3.8MB / 15 files**, 720×720 H.264); only the active carousel page mounts a player.
 - [x] Muscle infographics bundled (`app/assets/muscles/`, **1.7MB / 20 files**).
-- [ ] **🔖 CHECKPOINT — Migrate exercise art + video to Firebase Storage** (see §12). ⚠️ **Bundled media is now ~12.9MB** (7.4 art + 3.8 video + 1.7 infographics) against a documented ~15–20MB trigger — **this is now the closest-to-due deferred item.** Adding the 15 proposed exercises or more videos would cross it.
+- [ ] **🔖 CHECKPOINT — Migrate exercise art + video to Firebase Storage** (see §12). Bundled media is ~12.9MB (7.4 art + 3.8 video + 1.7 infographics). **⛔ Deferred to AFTER FIRST REVENUE ($0-budget constraint, Jul 2026)** — this overrides the old ~15–20MB size trigger. Bundled media works offline and costs nothing; revisit only if the store binary size becomes a conversion problem.
 - [ ] Measure production bundle size (native binary + web initial load); set budgets.
 - [ ] Image/asset optimization pass if bundle grows.
 - [ ] Verify `react@19.1.0` / dependency alignment holds for the production install.

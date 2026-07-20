@@ -12,6 +12,10 @@ _Last updated: 2026-07-19. Read this first in a new session, then pull the refer
 
 **As of Jul 19 the app also RUNS ON ANDROID for the first time** — see "Native is now working" below. One **non-blocking product decision is parked**: whether the demo videos should also play inside the Workout Player, which today deliberately uses the interactive 3D scene instead (full rationale + trade-offs in `docs/APP_FEATURES.md` §D "PARKED PRODUCT DECISION"). Not a bug — do not "fix" it without a product call.
 
+## ⛔ Hard constraint — $0 budget until revenue (Jul 2026)
+
+The developer is bootstrapping: **no paid services, tiers, or subscriptions may be recommended or adopted until the app generates revenue.** Everything must run on free tiers — and the current stack deliberately does: Sentry (5K errors/mo free), GA4 (free), GitHub Free + public-repo Actions (unlimited CI), Expo local builds (no EAS cloud), bundled media (no CDN), free web hosting. Acknowledged exceptions only: **Google Play $25 one-time**, and **Firebase Blaze card-on-file** when Functions deploy (free quotas ≈ $0/mo; set a $1 budget alert). **Apple $99/yr is deferred** — Android + web PWA first. The media→CDN migration is deferred to *after first revenue*, overriding the old ~15–20 MB size trigger. If a paid option is materially better, present it only as a labeled "when revenue exists" upgrade — never the default.
+
 Full narrative history — architecture decisions, every gotcha, exact tool params — lives in Claude's memory system (not duplicated here):
 - `mocap-video-pipeline.md` — **the main log**: Mixamo→Blender + fal/Seedance/Kling pipeline, every round of fixes, exact model params
 - `native-android-setup.md` — **read before ANY native work**: the four blockers that made native unbuildable, plus this machine's Windows build prerequisites
@@ -56,7 +60,7 @@ Native builds fail without these; see `native-android-setup.md` for the full dia
 ## Immediate next steps (priority order)
 
 1. **iOS bring-up** (needs a macOS host) and Android QA on **physical hardware** — the remaining native gaps. Re-verifying Android needs only Metro + `adb reverse tcp:8081 tcp:8081`; the APK persists across emulator restarts, so no rebuild/`subst`/Gradle.
-2. **Plan the media → Firebase Storage / CDN migration.** Bundled media is ~12.9 MB (7.4 art + 3.8 video + 1.7 infographics); the documented trigger is ~15–20 MB, so this is coming due. Do it during production-readiness when Storage rules are set up anyway — not during feature work.
+2. ~~Plan the media → Firebase Storage / CDN migration~~ — **deferred to after first revenue** ($0-budget constraint above). Bundled media (~12.9 MB) stays bundled; it works offline and costs nothing.
 3. **Production readiness** (nothing exists yet): CI/CD, crash reporting, real analytics, App Check, Remote Config, data-deletion flow.
 4. **Upgrade or replace `expo-three@8.0.0`** to remove the dependency-override workarounds.
 
