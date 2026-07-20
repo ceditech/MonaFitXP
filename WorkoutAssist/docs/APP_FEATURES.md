@@ -1,13 +1,15 @@
 # WorkoutAssist / MonaFitXP — Feature Status
 
-_Last reconciled with the codebase: 2026-07-08._
+_Last reconciled with the codebase: 2026-07-18._
 
 This document reflects the **actual** state of the code, not aspirational planning.
-Status legend: ✅ Completed · 🟡 In progress / partial · 🔴 Not started.
+Status legend: ✅ Completed · 🟡 In progress / partial · 🔴 Not started · 🔧 Works, needs improvement.
+
+**Verified at this reconciliation:** `npx jest` → 11 suites / 97 tests passing · `tsc --noEmit` clean · working tree clean (through `26416ab`) · 15 demo videos + 20 muscle infographics present on disk and registered · **the app builds and runs on an Android emulator** (first time, Jul 19 — see §1.9).
 
 ---
 
-## 1. Completed Features ✅
+## A. Completed Features ✅
 
 ### 1.1 Core MVP (foundation)
 - React Native / Expo app for Android, iOS, and web.
@@ -24,86 +26,126 @@ Status legend: ✅ Completed · 🟡 In progress / partial · 🔴 Not started.
 - Workout summary, workout history, and progress dashboard screens.
 - Cloud Functions: user initialization, and workout-completion metrics aggregation (streak, weekly volume, PRs, volume history).
 
-### 1.2 Robustness & correctness (added Jul 2026)
+### 1.2 Robustness & correctness (Jul 2026)
 - Test harness repaired: migrated to the `jest-expo` preset with AsyncStorage + Firebase SDK mocks (fixed 5 previously-broken suites); resolved the `react@19.1.0` / `react-test-renderer` version mismatch.
 - Global `ErrorBoundary` wrapping the app (reused as the silent fallback boundary for optional visuals).
 - Tiered access guard: `RequireTier` with `RequirePro` / `RequirePlus` wrappers (single gating implementation).
-- **Entitlement schema unified** on `tier: 'free' | 'plus' | 'pro'`: fixed a bug where `isPro` was permanently false (it read a field the backend never wrote); added `isPlus`; legacy `plan` docs are normalized. Guests no longer trigger Firestore permission-denied errors.
-- **Metrics correctness fixes** in the workout-completion function: real consecutive-day streak (previously counted unique days), and timezone-aware day bucketing for streak and volume history. Logic extracted into pure, testable helpers.
+- **Entitlement schema unified** on `tier: 'free' | 'plus' | 'pro'`: fixed a bug where `isPro` was permanently false; added `isPlus`; legacy `plan` docs are normalized. Guests no longer trigger Firestore permission-denied errors.
+- **Metrics correctness fixes** in the workout-completion function: real consecutive-day streak, and timezone-aware day bucketing. Logic extracted into pure, testable helpers.
 
-### 1.3 Smart training tools (added Jul 2026)
+### 1.3 Smart training tools (Jul 2026)
 - Pure training library: Epley estimated 1RM + per-day e1RM timeline, progressive-overload suggestion (increase / hold / deload), barbell plate calculator, warm-up-set generator.
 - Workout Player surfacing: last-performance overload suggestion chip (Plus-gated with upsell), plate-calculator sheet, warm-up suggestion.
 - Progress dashboard: "Estimated 1RM" section with a Plus-gated per-exercise e1RM history chart.
 - Repository support: `getLastExercisePerformance`, `getExerciseSetHistory`.
 
-### 1.4 Gamification — XP, levels, badges (added Jul 2026, server-authoritative)
-- XP awarded per completed workout via the `onWorkoutCompleted` function: capped formula (base + sets + volume + PRs + streak), daily cap, and retry idempotency, inside a transaction.
+### 1.4 Gamification — XP, levels, badges (Jul 2026, server-authoritative)
+- XP awarded per completed workout via `onWorkoutCompleted`: capped formula (base + sets + volume + PRs + streak), daily cap, retry idempotency, inside a transaction.
 - Level curve and 10 achievable badges evaluated server-side.
-- Stored at `users/{uid}/metrics/gamification` (client-write-denied by existing rules — anti-cheat).
+- Stored at `users/{uid}/metrics/gamification` (client-write-denied — anti-cheat).
 - Client UI: Level ring on Home, XP-gained card on the workout summary, badges grid on Progress.
 
-### 1.5 Exercise animations & modern UI (added Jul 2026)
-- Three.js + GSAP motion architecture: lazily code-split, with a web `<canvas>` adapter and a native `expo-gl` adapter, SVG fallbacks, and reduce-motion / no-GL handling — so animations never block the workout flow.
-- **Procedural animated mannequin** performing 16 distinct exercise movements (squat, lunge, deadlift, bench, overhead press, row, curl, push-up, pull-up, plank, jumping jack, run, crunch, calf raise, lateral raise, generic) — no 3D asset files required.
-- Shown as the form-demo hero on the redesigned Exercise Detail screen and in the Workout Player (animates the current exercise; pulses on set log, green on PR).
-- Rest-timer progress ring (rest overlay) and celebration particle bursts on the summary (finish / PR / level-up).
-- Web layout now renders in a centered phone-width frame (fixes the stretched desktop layout).
+### 1.5 Motion architecture & modern UI (Jul 2026)
+- Three.js + GSAP motion architecture: lazily code-split, with a web `<canvas>` adapter and a native `expo-gl` adapter, SVG fallbacks, and reduce-motion / no-GL handling — animations never block the workout flow.
+- **Procedural animated mannequin** performing 16 distinct exercise movements — no 3D asset files required. Remains the guaranteed fallback.
+- **Rigged GLB demo** (squat) played via `THREE.AnimationMixer`, strictly opt-in with a hard procedural fallback.
+- Rest-timer progress ring and celebration particle bursts on the summary (finish / PR / level-up).
+- Web layout renders in a centered phone-width frame.
 
-### 1.6 Richer exercise catalog (added Jul 2026)
-- Exercise schema extended (all optional, backward-compatible): `media` (thumbnail/video/animationKey), `primaryMuscleGroup`, `muscleDiagram`, `isCustom`/`ownerUid`, `formTip`.
-- **Custom exercises**: create / delete, per-user (`users/{uid}/customExercises`) with validation rules; merged with the catalog in the repository layer.
-- **Favorites**: star toggle + "Favorites" filter (`favoriteExerciseIds` on the profile).
-- `MuscleDiagram` SVG body-highlight component (the slot future form-demo art can replace).
-- Create-custom-exercise screen.
-- **"How to Perform" content for all 20 catalog exercises**: 5 structured coaching steps each plus a highlighted "Pro Tip" cue.
+### 1.6 Richer exercise catalog (Jul 2026)
+- Exercise schema extended (all optional, backward-compatible): `media`, `primaryMuscleGroup`, `muscleDiagram`, `isCustom`/`ownerUid`, `formTip`.
+- **Custom exercises**: create / delete, per-user with validation rules; merged with the catalog in the repository layer.
+- **Favorites**: star toggle + "Favorites" filter.
+- `MuscleDiagram` SVG body-highlight component (fallback when no infographic exists).
+- **"How to Perform" content for all 20 catalog exercises**: 5 structured coaching steps each plus a "Pro Tip" cue.
 
-### 1.7 Sharing (added Jul 2026)
-- Shareable branded workout-summary card: native path via `react-native-view-shot` + `expo-sharing`; web path via canvas + Web Share API / PNG download.
+### 1.7 Sharing (Jul 2026)
+- Shareable branded workout-summary card: native via `react-native-view-shot` + `expo-sharing`; web via canvas + Web Share API / PNG download.
+
+### 1.8 Pre-rendered demo media & detail carousel (Jul 10–18, 2026) — **new since last reconciliation**
+- **Demo videos on 15 of 20 exercises** (`app/assets/videos/`, 3.8 MB, 720×720 H.264 loops), served via `expo-video` and registered **by exercise ID** in `exerciseVideos.ts` (id-keyed deliberately — several exercises share an `animationKey`, so key-based lookup showed the wrong movement).
+- Production pipeline: Mixamo mocap → Blender (anatomical écorché character, muscle-painted, branded stage) → render, plus an AI path (fal: Kling v3 / Seedance / nano-banana-pro) for movements Mixamo lacks. Documented in `VISUAL_UPGRADE_TOOLING.md` + Claude memory.
+- **AI muscle infographics on all 20 exercises** (`app/assets/muscles/`, 1.7 MB), id-keyed, shown on the Targets card over the SVG diagram when present.
+- **Exercise-detail carousel**: swipe + header chevrons page through the entire catalog; all pages stay mounted but only the **active** page mounts a video/GL demo (one GL context / autoplaying video at a time).
+- Demo hero fallback chain: **video → 3D GLB/procedural scene → poster image → SVG muscle diagram**, so a missing asset never breaks the screen.
+- **Carousel layout regression fixed (Jul 18)**: pages were sized from `useWindowDimensions()` (the *window*), which overflowed ~3× whenever the window ≠ the carousel container. Now the container is measured directly via ref + `getBoundingClientRect` (RN-web's `onLayout`/ResizeObserver does not fire reliably in this build), with window width as a first-frame fallback.
+
+### 1.9 Native Android brought up & verified (Jul 19, 2026) — **new since last reconciliation**
+
+**The app now builds and runs on Android for the first time.** It previously could not: the project was **scaffolded as a plain React Native app** with Expo layered on top, so the native projects were never Expo-compatible. Web was unaffected (it never touches them), which is why web-only verification never surfaced it. Four independent blockers, each masked by the previous — all fixed:
+
+1. **`android/` + `ios/` were RN CLI template output** — no Expo autolinking in `settings.gradle`, so `expo/android/build.gradle` couldn't resolve `ExpoModuleExtension`. Regenerated via `expo prebuild --clean`, after adding `android.package` to `app.json` (missing — without it prebuild invents a new applicationId and changes app identity). Same origin story explains the old `react-native run-android` scripts and the `org.reactjs.native.example.*` iOS bundle id.
+2. **Dependency hoisting installed SDK-incompatible Expo native modules** — `expo-file-system@13.2.1` (SDK-44 era; its `build.gradle` uses the `maven` plugin removed in Gradle 7 → build failure) and `expo-font@57` (calls `getDirectConverter()`, absent from `expo-modules-core@3.x` → **startup crash**). Both pinned with `overrides` in `package.json` to `expo/bundledNativeModules.json` values. `expo install --fix` does not fix these — they are transitive.
+3. **`babel.config.js` used the bare RN preset**; `babel-preset-expo` was not installed. Expo's `winter` polyfills were mis-compiled with `@babel/runtime` helpers, emitting a bare `require()` into the Metro prelude → every launch died with `ReferenceError: Property 'require' doesn't exist`.
+4. **Firebase auth was web-only** (`getAuth` + `browserLocalPersistence`) → `onAuthStateChanged` never fired on device, so `SessionProvider.isLoading` never cleared and the app hung on the loading spinner forever. Fixed with a `src/firebase/firebase.native.ts` platform split (`initializeAuth` + AsyncStorage persistence); the web entry point is untouched.
+
+**Also shipped:** bottom **tab-bar icons** (`RootNavigator.tsx` previously defined only `title` and no `tabBarIcon`, producing the placeholder/mojibake glyphs) — now a typed `TAB_ICONS` map, filled when focused / outline otherwise.
+
+**Verified live on an Android 16 emulator (dev build):** Welcome → guest → Home; tab icons (all 5 distinct, active tinted); `expo-video` playback (squat + regenerated bench press); the exercise-detail carousel **including its native `.measure()` path** and chevron paging; `expo-gl`/three.js 3D demos; the id-keyed video registry (Leg Press correctly shows the 3D demo rather than the squat video); and the **complete workout loop** — Start Workout → set logging → rest-timer overlay → Finish Workout → Summary → **Share Workout**, which captured the branded card (`react-native-view-shot`) and opened the Android share sheet with a correct preview (`expo-sharing`).
 
 ---
 
-## 2. In Progress / Partial 🟡
+## B. In Progress / Partial 🟡
 
-- **Monetization** — Paywall UI, all three tiers, entitlement provider, and Plus/Pro gating are live, and the entitlement document is secured for server-only writes. **Missing:** real payment integration (the upgrade action is a "Stripe flow coming soon" stub) and a server-side purchase-verification function.
-- **AI Coach** — routed and Pro-gated, but the screen is still a **static placeholder** (no chat, no logic).
-- **Notifications** — preference UI and persisted preference fields exist, but there is **no real scheduling or permission handling** (`expo-notifications` is not installed).
-- **Native (Android / iOS) verification** — the new 3D exercise scenes and the share sheet have been verified on **web only**; native device/emulator smoke testing is pending.
-- **Firestore re-seed** — the enriched exercise fields (instructions, `formTip`, `animationKey`, `primaryMuscleGroup`) are in the local seed file, so guest/mock users have them now; a `npm run seed` re-seed is needed for authenticated users to get them from Firestore.
+- **Monetization** — Paywall UI, all three tiers, entitlement provider, and Plus/Pro gating are live, and the entitlement doc is secured for server-only writes. **Missing:** real payment integration (`UpgradeScreen` logs *"Stripe flow coming soon"*; `PaywallScreen` shows *"Coming soon! Payment integration pending."*) and a server-side purchase-verification function. No payment SDK is installed.
+- **AI Coach** — routed and Pro-gated, but `AICoachScreen.tsx` (120 lines) is still a **static placeholder** (`chatPlaceholder`, no chat, no logic).
+- **Notifications** — preference UI and persisted preference fields exist, but there is **no scheduling or permission handling**; `expo-notifications` is still **not installed**.
+- **Native verification** — **Android is fully verified on an emulator** (see §1.9), including the complete workout → summary → share loop. Two gaps remain: **iOS is entirely unverified** (the native project was regenerated by prebuild but never built; no macOS host available), and Android has only run on an **emulator**, not physical hardware.
+- **Firestore re-seed** — enriched exercise fields are in the local seed file (so guest/mock users have them); a `npm run seed` re-seed is needed for authenticated users.
 
 ---
 
-## 3. Remaining To Implement 🔴
+## C. Remaining To Implement 🔴
 
 ### Product features
-- Real payment integration for Plus and Pro subscriptions + server-verified entitlement updates on purchase.
+- Real payment integration for Plus and Pro + server-verified entitlement updates on purchase.
 - Actual push / local reminder scheduling and notification-permission handling.
 - Fully functional AI Coach (chat, adaptive routines, form analysis, plan recommendations).
-- **Custom workout / plan builder** (assemble a plan from arbitrary exercises — distinct from custom *exercise* creation, which is done).
+- **Custom workout / plan builder** — assemble a plan from arbitrary exercises. Distinct from custom *exercise* creation (done) and from the template-based `CreatePlanScreen` (done).
 - Nutrition tracking.
 - 1-on-1 coaching workflow or integration.
 
 ### Platform & production readiness
-- CI/CD pipeline.
-- Crash reporting (Crashlytics / Sentry equivalent).
-- Production analytics backend (analytics are currently `console.log` only).
+- CI/CD pipeline (no `.github/workflows` exists).
+- Crash reporting (Crashlytics / Sentry) — no SDK installed.
+- Production analytics backend (analytics are `console.log('[Analytics] …')` only).
 - Remote Config defaults and safe fallback verification.
 - Firebase App Check.
 - Release smoke checks.
 - User data deletion and compliance flow.
 - Device-level QA for Android and iOS.
 
-### Quality / hygiene
-- Automated tests for the new features (training lib, XP/gamification, entitlements, repositories) — **intentionally deferred** by the team for now; pure logic was written test-ready.
-- **Fix tab-bar mojibake**: the bottom tab icons render as broken `⏷` glyphs (an encoding/icon issue) and should be replaced with proper icons.
-- Replace console-only analytics with a real pipeline.
+---
+
+## D. Works, But Needs Improvement 🔧
+
+Things that are **shipped and functional** but carry known debt, cost, or quality gaps. None of these are regressions — they are conscious trade-offs to revisit.
+
+### Media & assets
+- **Bundled media is now ~12.9 MB** (7.4 MB exercise hero art + 3.8 MB demo videos + 1.7 MB muscle infographics). The documented migration trigger in `PREDEPLOYMENT_LAUNCH_CHECK.md` §12 is "art payload past ~15–20 MB" — **we are close**. Plan the Firebase Storage / CDN migration during production-readiness, not during feature work. `getExerciseImage` / `getExerciseVideo` are single resolvers, so there is no lock-in.
+- **5 of 20 exercises have no demo video** — the machine exercises (Leg Press, Lat Pulldown, Seated Row, Face Pull, Hamstring Curl). **Deliberate** (poor video ROI); they fall back to infographic + 3D demo. Do not "fix" without a product decision.
+- **Bench Press video is stylistically inconsistent** — it is a cinematic close-up on a dark background, whereas the other 14 are wide shots on the branded purple stage. Its muscle glow also reads slightly bright/detached and the chest cyan sits centrally rather than spread across both pecs. Anatomically correct as of Jul 18; cosmetic polish only.
+- Videos and infographics are **bundled**, so updating art requires an app release.
+- **🔖 PARKED PRODUCT DECISION — demo videos in the Workout Player.** The 15 pre-rendered videos are deliberately wired **only into the Exercise Detail screen**; the Workout Player renders the live `ExerciseDemo` 3D scene directly (`WorkoutPlayerScreen.tsx:360`) and never calls `getExerciseVideo`. Reasons at the time: (a) the player drives the figure **interactively** through an `ExerciseDemoHandle` ref — it pulses on set log and flashes green on PR, which a looping MP4 cannot do; (b) the procedural rig guarantees a demo for **every** exercise, vs. 15/20 video coverage mid-session. **Revisit**: the videos look dramatically better, and the set-log/PR feedback could move to UI-level effects around a video (border glow / particle burst). If adopted, weigh losing on-figure feedback and video player mount/unmount churn on every exercise change. Confirmed working-as-designed during the Jul 19 native smoke test (player showed the mannequin for exercises that have videos — not a bug).
+
+### Platform / technical debt
+- **`expo-three@8.0.0` is the root of the dependency overrides** — it pins SDK-44-era Expo packages, forcing the `expo-file-system` / `expo-font` pins in `package.json`. Upgrading or replacing it (it is the only consumer of `expo-gl` + three bridging) would remove that workaround. Its helper packages (`@expo/browser-polyfill`, `expo-asset-utils`) were written against the old FileSystem API, so **watch the 3D demo on native after any change here**.
+- **The native projects are prebuild output and should be treated as generated.** `expo prebuild --clean` regenerates them wholesale, and it **deletes `android/local.properties`** (gitignored, holds `sdk.dir`) every time. Any hand-edit to `android/` will be lost on the next prebuild — put config in `app.json` / config plugins instead.
+- **Windows build prerequisites are non-obvious** — `MAX_PATH` requires a `subst` drive (or long-paths enabled), and McAfee's firewall blocks Java's NIO `Selector.open()`, breaking Gradle entirely. Documented in `CLAUDE_HANDOFF.md`; a fresh clone on another machine will not hit the McAfee issue but will still hit `MAX_PATH` if the path is deep.
+- **`onLayout` is unreliable on react-native-web 0.21** in this app (does not fire at mount or on resize). Any future container measurement must use the ref + `getBoundingClientRect` pattern established in `ExerciseDetailScreen`. Documented so it is not rediscovered the hard way.
+- **Analytics are console-only** — the event call sites exist and are well-placed, so swapping in a real pipeline is a contained change, but nothing is currently collected.
+- **Carousel mounts all pages** (only the active one mounts heavy media). Fine at 20 exercises; revisit windowing if the catalog grows substantially, since RN-web's virtualized list resets scroll offset on re-render (the reason `FlatList` was rejected).
+
+### Testing
+- **Coverage gaps on newer features** — training lib, XP/gamification, entitlements, repositories, share-card, and the carousel have **no automated tests**. Intentionally deferred; pure logic was written test-ready. The 97 passing tests cover the older surface.
+- No end-to-end test of the critical path (sign up → plan → workout → history → XP).
 
 ---
 
-## 4. Suggested Next Phases
+## E. Suggested Next Phases
 
 ### Phase A — Production readiness
-CI/CD, crash reporting, real analytics, Remote Config, App Check, release smoke checks, data-deletion/compliance.
+CI/CD, crash reporting, real analytics, Remote Config, App Check, release smoke checks, data-deletion/compliance. **⛔ $0-budget constraint (Jul 2026): free tiers only until revenue** — the media → Storage/CDN migration is deferred to after first revenue, and iOS/EAS/paid tooling are "when revenue exists" upgrades (Android + web PWA first).
 
 ### Phase B — Monetization
 Payment integration (Plus/Pro), server-side purchase verification, entitlement updates from trusted backend events only, replace the upgrade stub, verify gates across premium templates and AI Coach.
@@ -114,5 +156,5 @@ Real reminder scheduling + permission handling based on saved preferences, with 
 ### Phase D — Advanced coaching
 Build the AI Coach beyond the placeholder, adaptive plan recommendations, custom workout/plan builder, then nutrition tracking and coaching workflows.
 
-### Ongoing
-Native device QA of the 3D animations and sharing; backfill automated tests; fix the tab-bar icon glyphs.
+### Ongoing / quick wins
+**iOS** bring-up (needs a macOS host) · Android QA on **physical hardware** · upgrade/replace `expo-three@8` to drop the dependency overrides · backfill automated tests · Bench Press video style polish.

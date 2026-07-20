@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { track } from '../../lib/analytics';
 import {
     View,
     Text,
@@ -26,7 +27,7 @@ export const PlanTemplateDetailScreen = ({ route, navigation }: any) => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        console.log('[Analytics] plan_template_detail_viewed', { templateId });
+        track('plan_template_detail_viewed', { templateId });
         loadData();
     }, [templateId]);
 
@@ -59,14 +60,14 @@ export const PlanTemplateDetailScreen = ({ route, navigation }: any) => {
     const handleChoosePlan = async () => {
         if (!template) return;
 
-        console.log('[Analytics] choose_plan_clicked', { templateId });
+        track('choose_plan_clicked', { templateId });
 
         // Premium Gating Logic
         const isGuest = session?.mode === 'guest' || session?.mode === 'none';
         const isPremiumUser = entitlement.tier !== 'free';
 
         if (template.isPremium && (isGuest || !isPremiumUser)) {
-            console.log('[Analytics] paywall_redirected', {
+            track('paywall_redirected', {
                 templateId,
                 source: 'premium_plan_detail',
                 isGuest,

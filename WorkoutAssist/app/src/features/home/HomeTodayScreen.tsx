@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { track } from '../../lib/analytics';
 import {
     View,
     Text,
@@ -48,7 +49,7 @@ export const HomeTodayScreen = ({ navigation }: any) => {
     };
 
     useEffect(() => {
-        console.log('[Analytics] home_viewed');
+        track('home_viewed');
         loadData();
     }, [session.uid]);
 
@@ -69,7 +70,7 @@ export const HomeTodayScreen = ({ navigation }: any) => {
         <TouchableOpacity
             style={styles.actionCard}
             onPress={() => {
-                console.log(`[Analytics] quick_action_clicked: ${title}`);
+                track('quick_action_clicked', { title });
                 navigation.navigate(route);
             }}
         >

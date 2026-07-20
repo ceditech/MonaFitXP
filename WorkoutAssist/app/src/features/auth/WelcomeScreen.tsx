@@ -1,6 +1,7 @@
 
 // app/src/features/auth/WelcomeScreen.tsx
 import React, { useState, useEffect } from 'react';
+import { track } from '../../lib/analytics';
 import {
     View,
     Text,
@@ -32,11 +33,11 @@ export const WelcomeScreen = ({ navigation }: any) => {
     const isGuestLoading = session.isLoading;
 
     useEffect(() => {
-        console.log('[Analytics] welcome_viewed');
+        track('welcome_viewed');
     }, []);
 
     const handleContinueAsGuest = async () => {
-        console.log('[Analytics] continue_as_guest_clicked');
+        track('continue_as_guest_clicked');
 
         try {
             await ensureGuestSession();
@@ -47,12 +48,12 @@ export const WelcomeScreen = ({ navigation }: any) => {
     };
 
     const handleSignIn = () => {
-        console.log('[Analytics] sign_in_clicked');
+        track('sign_in_clicked');
         navigation.navigate('SignIn');
     };
 
     const handleSignUp = () => {
-        console.log('[Analytics] sign_up_clicked');
+        track('sign_up_clicked');
         navigation.navigate('SignUp');
     };
 

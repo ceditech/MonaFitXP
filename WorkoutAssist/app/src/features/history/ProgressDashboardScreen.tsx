@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { track } from '../../lib/analytics';
 import {
     View,
     Text,
@@ -62,7 +63,7 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
 
     useEffect(() => {
         loadData();
-        console.log('[Analytics] progress_viewed');
+        track('progress_viewed');
     }, [loadData]);
 
     const onRefresh = () => {
@@ -71,7 +72,7 @@ export const ProgressDashboardScreen = ({ navigation }: any) => {
     };
 
     const handlePROpen = (exerciseId: string) => {
-        console.log(`[Analytics] pr_opened: ${exerciseId}`);
+        track('pr_opened', { exerciseId });
         navigation.navigate('ExerciseDetail', { exerciseId });
     };
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { track } from '../../lib/analytics';
 import {
     View,
     Text,
@@ -50,7 +51,7 @@ export const ExerciseCatalogScreen = ({ navigation }: any) => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        console.log('[Analytics] catalog_viewed');
+        track('catalog_viewed');
     }, []);
 
     // Reload on focus so newly created custom exercises appear immediately.
@@ -86,7 +87,7 @@ export const ExerciseCatalogScreen = ({ navigation }: any) => {
         try {
             const updated = await repo.toggleFavorite(uid, exerciseId);
             setFavorites(updated);
-            console.log('[Analytics] favorite_toggled', { exerciseId });
+            track('favorite_toggled', { exerciseId });
         } catch (e) {
             console.error('[ExerciseCatalog] toggleFavorite error:', e);
         }
@@ -97,7 +98,7 @@ export const ExerciseCatalogScreen = ({ navigation }: any) => {
         const handler = setTimeout(() => {
             setDebouncedSearch(search);
             if (search.length > 0) {
-                console.log(`[Analytics] search_performed: ${search.length}`);
+                track('search_performed', { queryLength: search.length });
             }
         }, 350);
         return () => clearTimeout(handler);
@@ -108,13 +109,13 @@ export const ExerciseCatalogScreen = ({ navigation }: any) => {
             ? selectedEquipment.filter(x => x !== id)
             : [...selectedEquipment, id];
         setSelectedEquipment(next);
-        console.log(`[Analytics] filter_applied: equipmentCount=${next.length}`);
+        track('filter_applied', { equipmentCount: next.length });
     };
 
     const handleSelectMuscle = (muscle: string) => {
         const next = muscle === 'All' ? null : muscle;
         setSelectedMuscle(next);
-        console.log(`[Analytics] filter_applied: muscle=${next || 'all'}`);
+        track('filter_applied', { muscle: next || 'all' });
     };
 
     const filteredExercises = useMemo(() => {
@@ -129,7 +130,7 @@ export const ExerciseCatalogScreen = ({ navigation }: any) => {
     }, [exercises, debouncedSearch, selectedMuscle, selectedEquipment, showFavoritesOnly, favorites]);
 
     const handleOpenExercise = (id: string) => {
-        console.log(`[Analytics] exercise_opened: ${id}`);
+        track('exercise_opened', { exerciseId: id });
         navigation.navigate('ExerciseDetail', { exerciseId: id });
     };
 

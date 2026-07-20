@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { track } from '../../lib/analytics';
 import {
     View,
     Text,
@@ -29,7 +30,7 @@ export const CreatePlanScreen = ({ route, navigation }: any) => {
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
-        console.log('[Analytics] create_plan_viewed', { templateId });
+        track('create_plan_viewed', { templateId });
         loadData();
     }, [templateId]);
 
@@ -60,7 +61,7 @@ export const CreatePlanScreen = ({ route, navigation }: any) => {
             const next = prev.includes(day)
                 ? prev.filter(d => d !== day)
                 : [...prev, day];
-            console.log('[Analytics] schedule_selected', { countDays: next.length });
+            track('schedule_selected', { countDays: next.length });
             return next;
         });
     };
@@ -81,8 +82,8 @@ export const CreatePlanScreen = ({ route, navigation }: any) => {
                 active: true
             });
 
-            console.log('[Analytics] plan_created', { planId, templateId: template.id });
-            console.log('[Analytics] plan_activated', { planId });
+            track('plan_created', { planId, templateId: template.id });
+            track('plan_activated', { planId });
 
             // Success -> Back to Home Tab
             navigation.navigate('MainTabs', { screen: 'HomeToday' });

@@ -1,7 +1,7 @@
 # WorkoutAssist / MonaFitXP — Pre-Deployment & Launch Checklist
 
 _A living checklist of what must be verified before shipping to production. Keep it updated as items are completed or added._
-_Last updated: 2026-07-10._
+_Last updated: 2026-07-19._
 
 **Status legend:** `[ ]` not started · `[~]` partial / in progress · `[x]` done.
 This reflects the real state of the codebase — not aspirational planning.
@@ -66,7 +66,7 @@ This reflects the real state of the codebase — not aspirational planning.
 ## 6. CI/CD & Release
 
 - [ ] CI pipeline: install, `tsc --noEmit`, `jest` (app + functions), lint on every PR.
-- [ ] Automated builds via EAS Build (iOS + Android) and web deploy.
+- [ ] Automated builds — **local Android builds only until revenue** ($0 budget; EAS cloud builds and Apple's $99/yr are "when revenue exists" upgrades). Web deploy via a free tier (Firebase Hosting free / Cloudflare Pages).
 - [ ] EAS Update (OTA) channel strategy defined (prod/staging).
 - [ ] Release smoke-test checklist run against a production build before promotion.
 - [ ] Versioning / build numbers automated.
@@ -74,7 +74,8 @@ This reflects the real state of the codebase — not aspirational planning.
 ## 7. Testing & QA
 
 - [x] Unit tests green: app **97/97**, functions **36/36**; `tsc` clean.
-- [ ] **Native device QA (iOS + Android)** — the 3D exercise animations (expo-gl), share sheet, and full workout flow have only been verified on **web**.
+- [~] **Native device QA (iOS + Android)** — **Android now verified on an emulator (2026-07-19)**: expo-gl 3D demos, `expo-video` playback, the exercise-detail carousel *including its native `.measure()` path*, tab icons, and search all confirmed working. Getting there required fixing four structural blockers (the project had been scaffolded as plain React Native, not Expo — see `CLAUDE_HANDOFF.md` §"Native is now working"). The full workout → summary → **share sheet** loop is also verified (`react-native-view-shot` + `expo-sharing`). **Remaining:** **physical-device** Android QA and **iOS entirely** (no macOS host).
+- [ ] **Native build prerequisites on Windows** — `MAX_PATH` needs a `subst` drive or `LongPathsEnabled`; McAfee's firewall blocks Java's NIO `Selector.open()` and breaks Gradle outright; `expo prebuild --clean` deletes `android/local.properties`. Document these in onboarding before another dev tries to build.
 - [ ] Backfill tests for new features (training lib, XP/gamification, entitlements, repositories, share-card) — intentionally deferred; pure logic was written test-ready.
 - [ ] End-to-end critical path on all platforms: sign up → onboarding → create plan → start workout → log sets → finish → verify history/progress/XP.
 - [ ] Offline & resume testing for active workouts.
@@ -93,7 +94,9 @@ This reflects the real state of the codebase — not aspirational planning.
 
 - [x] Three.js lazy-chunked (kept out of the initial web bundle); pixel ratio clamped; SVG/reduce-motion fallbacks.
 - [x] Exercise hero images bundled as JPEGs (`app/assets/exercises/`, ~7.4MB / 35 images).
-- [ ] **🔖 CHECKPOINT — Migrate exercise art to Firebase Storage** (see §12 for full detail & triggers).
+- [x] Demo videos bundled (`app/assets/videos/`, **3.8MB / 15 files**, 720×720 H.264); only the active carousel page mounts a player.
+- [x] Muscle infographics bundled (`app/assets/muscles/`, **1.7MB / 20 files**).
+- [ ] **🔖 CHECKPOINT — Migrate exercise art + video to Firebase Storage** (see §12). Bundled media is ~12.9MB (7.4 art + 3.8 video + 1.7 infographics). **⛔ Deferred to AFTER FIRST REVENUE ($0-budget constraint, Jul 2026)** — this overrides the old ~15–20MB size trigger. Bundled media works offline and costs nothing; revisit only if the store binary size becomes a conversion problem.
 - [ ] Measure production bundle size (native binary + web initial load); set budgets.
 - [ ] Image/asset optimization pass if bundle grows.
 - [ ] Verify `react@19.1.0` / dependency alignment holds for the production install.
@@ -108,13 +111,17 @@ This reflects the real state of the codebase — not aspirational planning.
 ## 11. Content & Data
 
 - [x] 20 exercises with full instructions + Pro Tips + animation keys + hero images.
+- [x] Demo videos on **15 of 20** exercises; muscle infographics on **all 20**. The 5 machine exercises (Leg Press, Lat Pulldown, Seated Row, Face Pull, Hamstring Curl) are infographic-only **by deliberate product decision** — not a gap.
+- [ ] Bench Press demo video is stylistically inconsistent with the other 14 (cinematic close-up on dark vs. wide shot on the branded stage). Anatomically correct as of 2026-07-18; cosmetic polish only.
 - [ ] Decide launch scope for the 15 **proposed** exercises (data + images staged but not in the live catalog).
 - [ ] Plan templates reviewed for correctness and difficulty.
 - [ ] AI Coach: ship a real experience or hide behind a flag (currently a static placeholder).
 
 ## 12. Known Issues & Cleanup
 
-- [ ] **Tab-bar mojibake** — bottom tab icons render as broken `⏷` glyphs; replace with proper icons.
+- [x] **Tab-bar icons** — root cause was no `tabBarIcon` at all in `RootNavigator.tsx` (only `title`), so React Navigation rendered placeholder glyphs. Fixed 2026-07-19 with a typed `TAB_ICONS` map (Ionicons, filled when focused); verified on web **and** on the Android emulator.
+- [ ] **Dependency overrides are a workaround, not a fix** — `package.json` pins `expo-file-system` and `expo-font` because `expo-three@8.0.0` and `@expo/vector-icons` hoist SDK-incompatible versions. Upgrading/replacing `expo-three` would remove the need; until then, do not delete the `overrides` block (native build breaks, then crashes at startup).
+- [ ] **`onLayout` is unreliable on react-native-web 0.21 in this app** (does not fire at mount or on resize). Any container measurement must use ref + `getBoundingClientRect` (web) / `.measure()` (native) — the pattern established in `ExerciseDetailScreen`. Do not "simplify" it back to `onLayout`/`useWindowDimensions`; that was the cause of the Jul-18 carousel overflow regression.
 - [ ] Remove/ignore any generated runtime files not meant to be committed.
 - [ ] `flux-output/` (dev image scratch) is gitignored — confirm it stays out of releases.
 

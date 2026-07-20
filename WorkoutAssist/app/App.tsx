@@ -9,6 +9,7 @@ import { RootNavigator } from './src/app/navigation/RootNavigator';
 import { MigrationOverlay } from './src/features/auth/components/MigrationOverlay';
 import { EntitlementProvider } from './src/core/entitlements/EntitlementProvider';
 import { ErrorBoundary } from './src/shared/ui/ErrorBoundary';
+import { reportBoundaryError } from './src/core/observability/sentry';
 
 /**
  * On desktop web the app renders in a centered phone-width frame instead of
@@ -27,7 +28,9 @@ const WebFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const App = () => {
   return (
     <SafeAreaProvider>
-      <ErrorBoundary>
+      {/* Render-phase crashes are caught by React, so Sentry's global
+          handlers never see them — report explicitly. */}
+      <ErrorBoundary onError={reportBoundaryError}>
         <SessionProvider>
           <EntitlementProvider>
             <MigrationOverlay />

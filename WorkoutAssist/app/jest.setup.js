@@ -24,6 +24,26 @@ const makeFirebaseModuleMock = (overrides = {}) => {
   );
 };
 
+// Mock expo-video — its native module isn't available in the jest env
+// (App transitively imports it via ExerciseDetailScreen → VideoDemo).
+jest.mock('expo-video', () => ({
+  __esModule: true,
+  useVideoPlayer: jest.fn(() => ({
+    loop: false,
+    muted: false,
+    playing: false,
+    status: 'idle',
+    play: jest.fn(),
+    pause: jest.fn(),
+  })),
+  VideoView: () => null,
+}));
+// `useEvent` from expo drives VideoDemo's status tracking.
+jest.mock('expo', () => ({
+  __esModule: true,
+  useEvent: jest.fn(() => ({ status: 'idle' })),
+}));
+
 jest.mock('firebase/app', () => makeFirebaseModuleMock({ initializeApp: jest.fn(() => ({})) }));
 jest.mock('firebase/auth', () =>
   makeFirebaseModuleMock({
@@ -37,5 +57,25 @@ jest.mock('firebase/firestore', () =>
     getFirestore: jest.fn(() => ({})),
     onSnapshot: jest.fn(() => jest.fn()), // returns unsubscribe
     serverTimestamp: jest.fn(() => 'mock-server-timestamp'),
+  }),
+);
+
+// Sentry: the native module doesn't exist in jest; keep the surface our
+// code touches (init/wrap/captureException/addBreadcrumb) as no-ops.
+jest.mock('@sentry/react-native', () => ({
+  __esModule: true,
+  init: jest.fn(),
+  wrap: (component) => component,
+  captureException: jest.fn(),
+  addBreadcrumb: jest.fn(),
+}));
+
+// firebase/analytics is browser-only; tests resolve the .native analytics
+// facade, but mock it defensively in case a web-platform test imports it.
+jest.mock('firebase/analytics', () =>
+  makeFirebaseModuleMock({
+    isSupported: jest.fn(() => Promise.resolve(false)),
+    getAnalytics: jest.fn(() => ({})),
+    logEvent: jest.fn(),
   }),
 );
