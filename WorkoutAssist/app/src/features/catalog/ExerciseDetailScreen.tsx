@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { track } from '../../lib/analytics';
 import {
     View,
     Text,
@@ -212,7 +213,7 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
 
     useEffect(() => {
         if (exerciseId) {
-            console.log(`[Analytics] exercise_detail_viewed: ${exerciseId}`);
+            track('exercise_detail_viewed', { exerciseId });
             loadExercises();
         } else {
             setError('No exercise selected');
@@ -316,7 +317,7 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
             bus.publish(page);
             if (lastLoggedIndex.current !== page) {
                 lastLoggedIndex.current = page;
-                console.log(`[Analytics] exercise_detail_viewed: ${exercises[page].id}`);
+                track('exercise_detail_viewed', { exerciseId: exercises[page].id });
             }
         }
     }, [width, exercises, bus]);
@@ -336,7 +337,7 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
             bus.publish(page);
             if (lastLoggedIndex.current !== page) {
                 lastLoggedIndex.current = page;
-                console.log(`[Analytics] exercise_detail_viewed: ${exercises[page].id}`);
+                track('exercise_detail_viewed', { exerciseId: exercises[page].id });
             }
         }
     }, [width, exercises, bus]);

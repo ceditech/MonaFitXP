@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { track } from '../../lib/analytics';
 import {
     View,
     Text,
@@ -210,7 +211,7 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
             return { ...prev, sets: newSets };
         });
 
-        console.log('[Analytics] set_logged', { exerciseId: currentExerciseId });
+        track('set_logged', { exerciseId: currentExerciseId });
 
         // Demo-character pulse — 'pr' when this beats the last known top weight.
         const lastTopWeight = lastSets?.reduce((max, s) => Math.max(max, s.actualWeight || 0), 0) || 0;
@@ -224,7 +225,7 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
         setRestRemaining(duration);
         setRestTotal(duration);
         setIsResting(true);
-        console.log('[Analytics] rest_started');
+        track('rest_started');
 
         if (restTimerRef.current) clearInterval(restTimerRef.current);
         restTimerRef.current = setInterval(() => {
@@ -242,7 +243,7 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
     const skipRest = () => {
         setIsResting(false);
         if (restTimerRef.current) clearInterval(restTimerRef.current);
-        console.log('[Analytics] rest_skipped');
+        track('rest_skipped');
     };
 
     const handleNextExercise = async () => {
@@ -287,7 +288,7 @@ export const WorkoutPlayerScreen = ({ route, navigation }: any) => {
         if (confirmAction === 'finish') {
             try {
                 await repo.completeWorkout(uid, workout.id);
-                console.log('[Analytics] workout_completed', {
+                track('workout_completed', {
                     duration: secondsElapsed,
                     totalSets: workout.sets.filter(s => s.completedAt).length
                 });

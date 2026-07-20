@@ -5,6 +5,8 @@ import { Colors } from '../shared/ui/Theme';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEntitlement } from '../core/entitlements/EntitlementProvider';
 import { tierLabel } from '../core/entitlements/entitlement.model';
+import { Flags } from '../core/flags';
+import { track } from '../lib/analytics';
 
 export const UpgradeScreen = ({ route, navigation }: any) => {
     const { entitlement } = useEntitlement();
@@ -45,11 +47,25 @@ export const UpgradeScreen = ({ route, navigation }: any) => {
                 </View>
 
                 <View style={styles.footer}>
-                    <TouchableOpacity style={styles.primaryBtn} onPress={() => console.log('Stripe flow coming soon')}>
-                        <Text style={styles.primaryBtnText}>Upgrade Now</Text>
-                    </TouchableOpacity>
+                    {Flags.paymentsEnabled ? (
+                        <TouchableOpacity
+                            style={styles.primaryBtn}
+                            onPress={() => track('upgrade_clicked', { source: 'upgrade_screen' })}
+                        >
+                            <Text style={styles.primaryBtnText}>Upgrade Now</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        // No payment provider yet — an honest launch note beats
+                        // a purchase button that goes nowhere.
+                        <View style={styles.comingSoonBox}>
+                            <Text style={styles.comingSoonTitle}>Premium launches soon</Text>
+                            <Text style={styles.comingSoonSub}>
+                                During the beta, every feature is free — enjoy!
+                            </Text>
+                        </View>
+                    )}
                     <TouchableOpacity style={styles.secondaryBtn} onPress={() => navigation.goBack()}>
-                        <Text style={styles.secondaryBtnText}>Maybe Later</Text>
+                        <Text style={styles.secondaryBtnText}>{Flags.paymentsEnabled ? 'Maybe Later' : 'Back'}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -139,6 +155,25 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 18,
         fontWeight: '800',
+    },
+    comingSoonBox: {
+        backgroundColor: 'rgba(168, 85, 247, 0.12)',
+        borderWidth: 1,
+        borderColor: 'rgba(168, 85, 247, 0.35)',
+        borderRadius: 16,
+        paddingVertical: 18,
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    comingSoonTitle: {
+        color: '#fff',
+        fontSize: 17,
+        fontWeight: '800',
+    },
+    comingSoonSub: {
+        color: 'rgba(255, 255, 255, 0.55)',
+        fontSize: 13,
+        marginTop: 4,
     },
     secondaryBtn: {
         paddingVertical: 12,

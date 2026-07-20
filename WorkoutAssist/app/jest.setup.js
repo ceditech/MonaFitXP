@@ -59,3 +59,23 @@ jest.mock('firebase/firestore', () =>
     serverTimestamp: jest.fn(() => 'mock-server-timestamp'),
   }),
 );
+
+// Sentry: the native module doesn't exist in jest; keep the surface our
+// code touches (init/wrap/captureException/addBreadcrumb) as no-ops.
+jest.mock('@sentry/react-native', () => ({
+  __esModule: true,
+  init: jest.fn(),
+  wrap: (component) => component,
+  captureException: jest.fn(),
+  addBreadcrumb: jest.fn(),
+}));
+
+// firebase/analytics is browser-only; tests resolve the .native analytics
+// facade, but mock it defensively in case a web-platform test imports it.
+jest.mock('firebase/analytics', () =>
+  makeFirebaseModuleMock({
+    isSupported: jest.fn(() => Promise.resolve(false)),
+    getAnalytics: jest.fn(() => ({})),
+    logEvent: jest.fn(),
+  }),
+);

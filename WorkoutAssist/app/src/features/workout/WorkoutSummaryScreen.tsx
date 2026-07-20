@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { track } from '../../lib/analytics';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { Colors } from '../../shared/ui/Theme';
 import { useWorkoutRepo } from '../../repositories';
@@ -34,7 +35,7 @@ export const WorkoutSummaryScreen = ({ route, navigation }: any) => {
         try {
             const cardData = buildShareCardData({ workout, summary, gamification });
             const shared = await shareCard(shareCardRef, cardData);
-            if (shared) console.log('[Analytics] summary_shared', { workoutId });
+            if (shared) track('summary_shared', { workoutId });
         } catch (e) {
             console.error('[WorkoutSummary] share error:', e);
         } finally {
@@ -225,7 +226,7 @@ export const WorkoutSummaryScreen = ({ route, navigation }: any) => {
                         award={gamification.lastAward}
                         totalXp={gamification.totalXp}
                         onLevelUp={(level) => {
-                            console.log('[Analytics] level_up', { level });
+                            track('level_up', { level });
                             burstRef.current?.burst('levelUp');
                         }}
                     />

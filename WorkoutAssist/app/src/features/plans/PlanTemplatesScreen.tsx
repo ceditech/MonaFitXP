@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { track } from '../../lib/analytics';
 import {
     View,
     Text,
@@ -26,7 +27,7 @@ export const PlanTemplatesScreen = ({ navigation }: any) => {
     const [selectedFreq, setSelectedFreq] = useState('All');
 
     useEffect(() => {
-        console.log('[Analytics] plan_templates_viewed');
+        track('plan_templates_viewed');
         loadTemplates();
     }, []);
 
@@ -51,12 +52,12 @@ export const PlanTemplatesScreen = ({ navigation }: any) => {
 
     const handleFilterLevel = (level: string) => {
         setSelectedLevel(level);
-        console.log('[Analytics] plan_filter_applied', { level, daysPerWeek: selectedFreq });
+        track('plan_filter_applied', { level, daysPerWeek: selectedFreq });
     };
 
     const handleFilterFreq = (freq: string) => {
         setSelectedFreq(freq);
-        console.log('[Analytics] plan_filter_applied', { level: selectedLevel, daysPerWeek: freq });
+        track('plan_filter_applied', { level: selectedLevel, daysPerWeek: freq });
     };
 
     const renderHeader = () => (
@@ -96,7 +97,7 @@ export const PlanTemplatesScreen = ({ navigation }: any) => {
             style={styles.card}
             activeOpacity={0.8}
             onPress={() => {
-                console.log('[Analytics] plan_template_opened', { templateId: item.id });
+                track('plan_template_opened', { templateId: item.id });
                 navigation.navigate('PlanTemplateDetail', { templateId: item.id });
             }}
         >

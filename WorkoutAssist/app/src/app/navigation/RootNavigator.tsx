@@ -37,6 +37,7 @@ import { AICoachScreen } from '../../pages/AICoachScreen';
 import { AuthStackParamList, MainStackParamList, MainTabParamList } from './Routes';
 import { Colors } from '../../shared/ui/Theme';
 import { useEntitlement } from '../../core/entitlements/EntitlementProvider';
+import { Flags } from '../../core/flags';
 
 const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -82,7 +83,11 @@ const TabNavigator = () => (
         <Tab.Screen name="PlanTemplates" component={PlanTemplatesScreen} options={{ title: 'Plans' }} />
         <Tab.Screen name="ExerciseCatalog" component={ExerciseCatalogScreen} options={{ title: 'Exercises' }} />
         <Tab.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ title: 'History' }} />
-        <Tab.Screen name="AICoach" component={AICoachScreen} options={{ title: 'AI Coach' }} />
+        {/* Hidden until a real coach experience ships — the current screen is
+            a static placeholder that reads as broken to users. */}
+        {Flags.aiCoachEnabled && (
+            <Tab.Screen name="AICoach" component={AICoachScreen} options={{ title: 'AI Coach' }} />
+        )}
     </Tab.Navigator>
 );
 

@@ -10,6 +10,8 @@ import {
     StyleSheet
 } from 'react-native';
 import { Colors } from '../../shared/ui/Theme';
+import { Flags } from '../../core/flags';
+import { track } from '../../lib/analytics';
 
 interface PricingCardProps {
     tier: string;
@@ -66,19 +68,23 @@ export const PaywallScreen = ({ route, navigation }: any) => {
     const [showToast, setShowToast] = useState(false);
 
     useEffect(() => {
-        console.log('[Analytics] paywall_viewed', { source: source || 'unknown' });
+        track('paywall_viewed', { source: source || 'unknown' });
     }, [source]);
 
     const handleUpgrade = (tier: 'plus' | 'pro') => {
-        console.log('[Analytics] upgrade_clicked', { tier });
+        track('upgrade_clicked', { tier });
         setShowToast(true);
         setTimeout(() => setShowToast(false), 2000);
     };
 
     const handleDismiss = () => {
-        console.log('[Analytics] paywall_dismissed', { source: source || 'unknown' });
+        track('paywall_dismissed', { source: source || 'unknown' });
         navigation.goBack();
     };
+
+    // No payment provider yet: hide purchase buttons and present the tiers
+    // as launch pricing instead of dead-ending the user in a stub.
+    const paymentsOn = Flags.paymentsEnabled;
 
     return (
         <SafeAreaView style={styles.container}>
@@ -90,6 +96,13 @@ export const PaywallScreen = ({ route, navigation }: any) => {
                         <Text style={styles.subtitle}>
                             This plan requires a premium subscription
                         </Text>
+                    )}
+                    {!paymentsOn && (
+                        <View style={styles.betaBanner}>
+                            <Text style={styles.betaBannerText}>
+                                Premium tiers launch soon — during the beta, everything is free.
+                            </Text>
+                        </View>
                     )}
                 </View>
 
@@ -117,7 +130,7 @@ export const PaywallScreen = ({ route, navigation }: any) => {
                             'Custom workout builder',
                             'Priority support'
                         ]}
-                        onUpgrade={() => handleUpgrade('plus')}
+                        onUpgrade={paymentsOn ? () => handleUpgrade('plus') : undefined}
                         isRecommended
                     />
                     <PricingCard
@@ -130,7 +143,7 @@ export const PaywallScreen = ({ route, navigation }: any) => {
                             'Nutrition tracking',
                             '1-on-1 coaching'
                         ]}
-                        onUpgrade={() => handleUpgrade('pro')}
+                        onUpgrade={paymentsOn ? () => handleUpgrade('pro') : undefined}
                     />
                 </View>
 
@@ -172,6 +185,21 @@ const styles = StyleSheet.create({
     subtitle: {
         fontSize: 14,
         color: 'rgba(255,255,255,0.6)',
+        textAlign: 'center',
+    },
+    betaBanner: {
+        marginTop: 14,
+        backgroundColor: 'rgba(168, 85, 247, 0.12)',
+        borderWidth: 1,
+        borderColor: 'rgba(168, 85, 247, 0.35)',
+        borderRadius: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+    },
+    betaBannerText: {
+        color: 'rgba(255,255,255,0.85)',
+        fontSize: 13,
+        fontWeight: '600',
         textAlign: 'center',
     },
     cardsContainer: {

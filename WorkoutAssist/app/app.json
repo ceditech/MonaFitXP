@@ -13,7 +13,8 @@
     ],
     "plugins": [
       "expo-asset",
-      "expo-video"
+      "expo-video",
+      "@sentry/react-native"
     ],
     "android": {
       "package": "com.workoutassist"

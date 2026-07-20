@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { track } from '../../lib/analytics';
 import {
     View,
     Text,
@@ -71,7 +72,7 @@ export const OnboardingWizard = ({ navigation }: any) => {
 
     useEffect(() => {
         loadProfile();
-        console.log('[Analytics] onboarding_started');
+        track('onboarding_started');
     }, []);
 
     const loadProfile = async () => {
@@ -95,7 +96,7 @@ export const OnboardingWizard = ({ navigation }: any) => {
 
     const handleNext = () => {
         if (currentStep < STEPS.length - 1) {
-            console.log(`[Analytics] onboarding_step_completed: ${STEPS[currentStep].title} (${currentStep})`);
+            track('onboarding_step_completed', { step: currentStep, title: STEPS[currentStep].title });
             setCurrentStep(s => s + 1);
         } else {
             handleFinish();
@@ -107,7 +108,7 @@ export const OnboardingWizard = ({ navigation }: any) => {
     };
 
     const handleSkip = async () => {
-        console.log('[Analytics] onboarding_skipped');
+        track('onboarding_skipped');
         setIsSaving(true);
         try {
             await repo.saveUserProfile(session.uid!, {
@@ -123,7 +124,7 @@ export const OnboardingWizard = ({ navigation }: any) => {
     };
 
     const handleFinish = async () => {
-        console.log('[Analytics] onboarding_completed');
+        track('onboarding_completed');
         if (!session.uid) return;
 
         setIsSaving(true);

@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { track } from '../../lib/analytics';
 import {
     View,
     Text,
@@ -49,7 +50,7 @@ export const CreateCustomExerciseScreen = ({ navigation }: any) => {
                 equipment: equipment.length > 0 ? equipment : ['none'],
                 primaryMuscleGroup: muscles[0]?.toLowerCase(),
             });
-            console.log('[Analytics] custom_exercise_created');
+            track('custom_exercise_created');
             navigation.goBack();
         } catch (e) {
             console.error('[CreateCustomExercise] save error:', e);

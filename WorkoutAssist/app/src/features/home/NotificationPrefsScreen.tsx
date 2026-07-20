@@ -1,6 +1,7 @@
 
 // app/src/features/home/NotificationPrefsScreen.tsx
 import React, { useState, useEffect } from 'react';
+import { track } from '../../lib/analytics';
 import {
     View,
     Text,
@@ -33,7 +34,7 @@ export const NotificationPrefsScreen = ({ navigation }: any) => {
 
     useEffect(() => {
         loadPreferences();
-        console.log('[Analytics] notif_prefs_viewed', { uid: session.uid });
+        track('notif_prefs_viewed', { uid: session.uid });
     }, []);
 
     const loadPreferences = async () => {
@@ -58,12 +59,12 @@ export const NotificationPrefsScreen = ({ navigation }: any) => {
 
     const handleToggle = (value: boolean) => {
         setRemindersEnabled(value);
-        console.log('[Analytics] notif_toggle_changed', { enabled: value });
+        track('notif_toggle_changed', { enabled: value });
     };
 
     const handleTimeChange = (text: string) => {
         setReminderTime(text);
-        console.log('[Analytics] notif_time_changed', { time: text });
+        track('notif_time_changed', { time: text });
     };
 
     const toggleDay = (day: string) => {
@@ -71,14 +72,14 @@ export const NotificationPrefsScreen = ({ navigation }: any) => {
             ? reminderDays.filter(d => d !== day)
             : [...reminderDays, day];
         setReminderDays(newDays);
-        console.log('[Analytics] notif_days_changed', { countDays: newDays.length });
+        track('notif_days_changed', { countDays: newDays.length });
     };
 
     const handleSave = async () => {
         if (!session.uid) return;
 
         setSaving(true);
-        console.log('[Analytics] notif_prefs_saved', {
+        track('notif_prefs_saved', {
             remindersEnabled,
             reminderTime,
             dayCount: reminderDays.length
