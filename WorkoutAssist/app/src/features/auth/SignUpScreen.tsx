@@ -1,7 +1,8 @@
 
 // app/src/features/auth/SignUpScreen.tsx
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { showAlert } from '../../shared/ui/showAlert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSession } from '../../session/SessionProvider';
 import { AuthBackground } from './components/AuthBackground';
@@ -39,7 +40,7 @@ export const SignUpScreen = ({ navigation }: any) => {
         } catch (error: any) {
             const errorMessage = error.message || 'Sign up failed. Please try again.';
             setError(errorMessage);
-            Alert.alert('Sign Up Failed', errorMessage);
+            showAlert('Sign Up Failed', errorMessage);
         } finally {
             setLoading(false);
         }

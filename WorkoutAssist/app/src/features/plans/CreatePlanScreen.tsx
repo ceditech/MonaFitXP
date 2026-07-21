@@ -7,9 +7,9 @@ import {
     TouchableOpacity,
     ScrollView,
     SafeAreaView,
-    ActivityIndicator,
-    Alert
+    ActivityIndicator
 } from 'react-native';
+import { showAlert } from '../../shared/ui/showAlert';
 import { useWorkoutRepo } from '../../repositories';
 import { useSession } from '../../session/SessionProvider';
 import { Colors } from '../../shared/ui/Theme';
@@ -69,7 +69,7 @@ export const CreatePlanScreen = ({ route, navigation }: any) => {
     const handleActivate = async () => {
         if (!uid || !template) return;
         if (selectedDays.length === 0) {
-            Alert.alert('Selection Required', 'Please select at least one workout day.');
+            showAlert('Selection Required', 'Please select at least one workout day.');
             return;
         }
 
@@ -89,7 +89,7 @@ export const CreatePlanScreen = ({ route, navigation }: any) => {
             navigation.navigate('MainTabs', { screen: 'HomeToday' });
         } catch (e) {
             console.error(e);
-            Alert.alert('Error', 'Failed to activate plan. Please try again.');
+            showAlert('Error', 'Failed to activate plan. Please try again.');
         } finally {
             setIsSaving(false);
         }

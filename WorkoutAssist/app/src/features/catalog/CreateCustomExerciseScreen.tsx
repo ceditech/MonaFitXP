@@ -10,8 +10,8 @@ import {
     SafeAreaView,
     ScrollView,
     ActivityIndicator,
-    Alert,
 } from 'react-native';
+import { showAlert } from '../../shared/ui/showAlert';
 import { Colors } from '../../shared/ui/Theme';
 import { useWorkoutRepo } from '../../repositories';
 import { useSession } from '../../session/SessionProvider';
@@ -54,7 +54,7 @@ export const CreateCustomExerciseScreen = ({ navigation }: any) => {
             navigation.goBack();
         } catch (e) {
             console.error('[CreateCustomExercise] save error:', e);
-            Alert.alert('Error', 'Failed to save exercise. Please try again.');
+            showAlert('Error', 'Failed to save exercise. Please try again.');
         } finally {
             setSaving(false);
         }

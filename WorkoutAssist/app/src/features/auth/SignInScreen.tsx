@@ -1,7 +1,8 @@
 
 // app/src/features/auth/SignInScreen.tsx
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { showAlert } from '../../shared/ui/showAlert';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSession } from '../../session/SessionProvider';
 import { AuthBackground } from './components/AuthBackground';
@@ -28,7 +29,7 @@ export const SignInScreen = ({ navigation }: any) => {
         } catch (error: any) {
             const errorMessage = error.message || 'Sign in failed. Please try again.';
             setError(errorMessage);
-            Alert.alert('Sign In Failed', errorMessage);
+            showAlert('Sign In Failed', errorMessage);
         } finally {
             setLoading(false);
         }

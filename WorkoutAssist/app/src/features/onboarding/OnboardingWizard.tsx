@@ -6,9 +6,9 @@ import {
     StyleSheet,
     TouchableOpacity,
     ScrollView,
-    ActivityIndicator,
-    Alert
+    ActivityIndicator
 } from 'react-native';
+import { showAlert } from '../../shared/ui/showAlert';
 import { useSession } from '../../session/SessionProvider';
 import { useWorkoutRepo } from '../../repositories';
 import { UserProfile } from '../../data/contracts/IWorkoutRepository';
@@ -131,7 +131,7 @@ export const OnboardingWizard = ({ navigation }: any) => {
             await refreshProfile();
             navigation.replace('MainTabs', { screen: 'HomeToday' });
         } catch (error) {
-            Alert.alert('Error', 'Failed to save progress. Please try again.');
+            showAlert('Error', 'Failed to save progress. Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -185,7 +185,7 @@ export const OnboardingWizard = ({ navigation }: any) => {
             navigation.replace('MainTabs', { screen: 'HomeToday' });
         } catch (error) {
             console.error('[OnboardingWizard] handleFinish failed:', error);
-            Alert.alert('Error', 'Failed to complete onboarding. Please try again.');
+            showAlert('Error', 'Failed to complete onboarding. Please try again.');
         } finally {
             setIsSaving(false);
         }
