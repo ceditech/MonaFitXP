@@ -9,6 +9,7 @@ import { RootNavigator } from './src/app/navigation/RootNavigator';
 import { MigrationOverlay } from './src/features/auth/components/MigrationOverlay';
 import { EntitlementProvider } from './src/core/entitlements/EntitlementProvider';
 import { ErrorBoundary } from './src/shared/ui/ErrorBoundary';
+import { AlertHost } from './src/shared/ui/AlertHost';
 import { reportBoundaryError } from './src/core/observability/sentry';
 
 /**
@@ -37,6 +38,10 @@ const App = () => {
             <RepoProvider>
               <WebFrame>
                 <RootNavigator />
+                {/* Mounted once, inside the frame so the dialog is scoped to the
+                    phone-width app on desktop web rather than the whole page.
+                    showAlert() dispatches here from anywhere in the app. */}
+                <AlertHost />
               </WebFrame>
             </RepoProvider>
           </EntitlementProvider>

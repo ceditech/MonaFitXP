@@ -22,6 +22,18 @@ import { db } from '../firebase/firebase';
 
 const SessionContext = createContext<SessionContextValue | undefined>(undefined);
 
+/**
+ * Shape returned by syncUserProfile. Deliberately open-ended — the Firestore doc
+ * carries far more than the session needs — but the fields the session actually
+ * reads are named so a typo or a missing plumb-through is a compile error rather
+ * than a silently undefined value.
+ */
+interface SyncedProfile {
+    onboardingCompleted?: boolean;
+    onboardingSkippedAt?: string;
+    [key: string]: any;
+}
+
 export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [state, setState] = useState<SessionState>({
         uid: null,
@@ -40,6 +52,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     mode: 'authenticated',
                     isLoading: false,
                     onboardingCompleted: profile.onboardingCompleted,
+                    onboardingSkippedAt: profile.onboardingSkippedAt,
                     userProfile: profile
                 });
             } else {
@@ -51,7 +64,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return () => unsubscribe();
     }, []);
 
-    const syncUserProfile = async (uid: string) => {
+    const syncUserProfile = async (uid: string): Promise<SyncedProfile> => {
         const userRef = doc(db, 'users', uid);
         const userSnap = await getDoc(userRef);
 
@@ -76,6 +89,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setState(prev => ({
                 ...prev,
                 onboardingCompleted: profile.onboardingCompleted,
+                onboardingSkippedAt: profile.onboardingSkippedAt,
                 userProfile: profile
             }));
         }

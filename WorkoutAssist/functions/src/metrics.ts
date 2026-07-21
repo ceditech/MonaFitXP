@@ -1,5 +1,7 @@
 
-import * as functions from 'firebase-functions';
+// v1 API — see auth.ts. Migrating this to v2 (onDocumentWritten) would change the
+// deployed trigger's identity and force a delete/recreate; deliberately deferred.
+import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import {
     computeWorkoutTotals,

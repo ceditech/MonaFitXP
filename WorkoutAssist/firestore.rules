@@ -20,6 +20,31 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.get('admin', false) == true;
     }
 
+    // --- PROFILE FIELD VALIDATION ---
+
+    // injuryFlags is health data (GDPR Art. 9 special category), so it is kept to
+    // a closed vocabulary rather than accepting arbitrary client strings. Without
+    // this the field is a free-text column the client fully controls — an easy
+    // place for unbounded or unintended personal detail to accumulate.
+    // Optional: profiles that never set it stay valid.
+    function validInjuryFlags() {
+      return !('injuryFlags' in request.resource.data)
+        || (request.resource.data.injuryFlags is list
+            && request.resource.data.injuryFlags.size() <= 20
+            && request.resource.data.injuryFlags.hasOnly(
+                 ['knees', 'lower_back', 'shoulders', 'wrists', 'neck']
+               ));
+    }
+
+    // dateOfBirth drives the under-16 age gate, so a client must not be able to
+    // edit it after the fact to slip past that check. Write-once: absent from the
+    // stored doc, or unchanged. Enforced on update only — create is the one write
+    // allowed to set it.
+    function dateOfBirthUnchanged() {
+      return !('dateOfBirth' in resource.data)
+        || request.resource.data.get('dateOfBirth', null) == resource.data.dateOfBirth;
+    }
+
     // --- GLOBAL CATALOGS ---
 
     // Exercise Catalog: Authenticated Read, Admin Write
@@ -38,8 +63,12 @@ service cloud.firestore {
 
     // User Profile: Owner R/W, Delete Denied
     match /users/{uid} {
-      allow read, create, update: if isOwner(uid);
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && validInjuryFlags();
+      allow update: if isOwner(uid) && validInjuryFlags() && dateOfBirthUnchanged();
       allow delete: if false; // Prevent accidental deletion
+                              // NOTE: erasure (GDPR Art. 17) still has no
+                              // server-side path either — see docs/ONBOARDING_SPEC.md G3.
 
       // Workouts: Owner R/W
       match /workouts/{workoutId} {

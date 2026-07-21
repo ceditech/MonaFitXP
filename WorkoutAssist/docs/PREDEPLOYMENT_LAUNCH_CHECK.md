@@ -1,7 +1,7 @@
 # WorkoutAssist / MonaFitXP — Pre-Deployment & Launch Checklist
 
 _A living checklist of what must be verified before shipping to production. Keep it updated as items are completed or added._
-_Last updated: 2026-07-19._
+_Last updated: 2026-07-21._ **The app is LIVE at https://workoutassist-6e273.web.app** (full backend + web deployed). Items below are now measured against a running production system, not a hypothetical launch.
 
 **Status legend:** `[ ]` not started · `[~]` partial / in progress · `[x]` done.
 This reflects the real state of the codebase — not aspirational planning.
@@ -10,20 +10,19 @@ This reflects the real state of the codebase — not aspirational planning.
 
 ## 0. Blockers — do not launch without these
 
-- [ ] **Real payment integration** for Plus/Pro (currently a "Stripe flow coming soon" stub). No purchases can be made.
-- [ ] **Server-side purchase verification** writing entitlements from trusted backend events only.
-- [ ] **Firebase App Check** enabled (Auth, Firestore, Functions) to stop API abuse.
-- [ ] **Firestore security rules reviewed and hardened** for every read/write path, then tested.
-- [ ] **Crash reporting** wired (Crashlytics / Sentry) so production crashes are visible.
+- [~] **Real payment integration** for Plus/Pro — **not a launch blocker for the current free beta**: payments are feature-flagged OFF (`flags.paymentsEnabled=false`) and the UI shows an honest "launches soon" state. Becomes a blocker the moment you charge. Write entitlement tests BEFORE starting this.
+- [~] **Server-side purchase verification** — deferred with payments above (same gate).
+- [ ] **Firebase App Check** enabled (Auth, Firestore, Functions) — ⚠️ **now the most urgent open blocker**: as of 2026-07-21 the backend is publicly reachable, so this is the main abuse defense. Free.
+- [x] **Firestore security rules reviewed and hardened** for every read/write path, then tested — audited 2026-07-20 (no privilege-escalation path: tier is read from the server-only `entitlements` doc) and pinned by **21 emulator-backed rules tests** that run in CI on every push.
+- [x] **Crash reporting** wired — **Sentry** (free tier) initialised before root registration, `Sentry.wrap(App)`, and the global `ErrorBoundary.onError` reports render-phase crashes. Verified delivering to the dashboard.
 - [ ] **User data deletion / account deletion flow** (App Store & Play Store requirement).
-- [ ] **Rotate all secrets** that touched development chats or logs (see §1).
 
 ---
 
 ## 1. Security & Secrets
 
 - [x] `.env` is gitignored; no secrets committed (`.env.example` documents keys).
-- [ ] **Rotate the BFL (Flux) API key** — it appeared in plaintext during development. Regenerate at `dashboard.bfl.ai` and update `.env`.
+- [x] ~~Rotate the BFL (Flux) API key~~ — **descoped 2026-07-20 (owner decision).** `.env` is gitignored and was never pushed; BFL is not called at runtime (the 35 hero images are already generated and bundled), so the blast radius is limited to BFL image credits. Rotate opportunistically at `dashboard.bfl.ai` if ever desired. **The BFL commercial-licensing question (§8) is unaffected and still open.**
 - [ ] Audit for any other keys/tokens in logs, chat history, or committed files.
 - [ ] Confirm Firebase config in the client is the intended project and has no admin/service-account keys bundled.
 - [ ] Service account keys live only in `secrets/` (gitignored) and CI secret stores — never in the repo.
@@ -34,10 +33,10 @@ This reflects the real state of the codebase — not aspirational planning.
 - [x] Metrics function (`onWorkoutCompleted`) computes summary/PRs/streak/volume + XP server-side.
 - [x] XP/gamification doc is server-write-only (client denied by rules) — anti-cheat.
 - [ ] **Review & test all Firestore rules** end-to-end (owner isolation, custom exercises, metrics/entitlements deny). Add rules unit tests (`@firebase/rules-unit-testing`).
-- [ ] **Deploy Cloud Functions** and confirm `functions/lib/` is rebuilt (`npm run build`) — there is **no predeploy hook**, so stale `lib/` would ship old code.
-- [ ] Verify Firestore composite indexes exist for all queries (deploy `firestore.indexes.json`).
-- [ ] **Firestore re-seed**: run `npm run seed` so authenticated users get the enriched exercise fields (instructions, `formTip`, `animationKey`, `primaryMuscleGroup`). Guests already have them via the local mock.
-- [ ] **Guest→account metrics migration bug**: `migrateGuestMetrics` writes to a server-only path and silently fails — fix or remove (see spawned task).
+- [x] **Deploy Cloud Functions** — deployed 2026-07-21 (`onWorkoutCompleted`, `ensureEntitlementDoc`, us-central1). Built fresh first; **there is still no predeploy hook**, so always `npm run build` before deploying. Needs `FUNCTIONS_DISCOVERY_TIMEOUT=120` on this machine (see handoff runbook).
+- [x] Firestore composite indexes deployed 2026-07-21.
+- [x] **Firestore re-seed** — done 2026-07-21: 20 exercises + 4 plan templates, 0 errors. Production `ex_001` verified carrying 5-step instructions, `formTip`, `primaryMuscleGroup`, `media.animationKey`. Auth via `gcloud auth application-default login` (no service-account key needed).
+- [x] **Guest→account metrics migration bug** — resolved 2026-07-20 by **removing** `migrateGuestMetrics`. It wrote client-side to `users/{uid}/metrics/**` which rules deny (anti-cheat), so it could only ever fail silently; and it was redundant because `onWorkoutCompleted` regenerates metrics server-side from the migrated workouts.
 - [ ] Set Cloud Functions region, memory, and min-instances appropriately; confirm cold-start acceptable.
 - [ ] Firebase Storage rules configured (currently unused — see §9 art migration).
 
@@ -59,13 +58,13 @@ This reflects the real state of the codebase — not aspirational planning.
 ## 5. Observability — Crash reporting, Analytics, Logging
 
 - [ ] Crash reporting (Crashlytics / Sentry) on native + web.
-- [ ] Replace console-only analytics (`[Analytics] ...` logs) with a real pipeline (events: signup, onboarding, workout_completed, upgrade_clicked, level_up, etc.).
+- [x] Analytics pipeline — all 47 `console.log('[Analytics] …')` call sites migrated to a `track()` facade: **Firebase Analytics/GA4** (`G-NX4W2PEQXD`) on web + Sentry breadcrumbs. Verified transmitting from production. **Native GA4 backend is still an open decision** (Firebase JS analytics is browser-only; native currently only gets Sentry breadcrumbs).
 - [ ] Structured logging + alerting on Cloud Functions failures (metrics/XP already log `[Audit]`).
-- [ ] Verify the global `ErrorBoundary` reports caught errors to the crash tool (`onError` hook).
+- [x] Global `ErrorBoundary.onError` reports render-phase crashes to Sentry.
 
 ## 6. CI/CD & Release
 
-- [ ] CI pipeline: install, `tsc --noEmit`, `jest` (app + functions), lint on every PR.
+- [x] CI pipeline — GitHub Actions, 3 jobs green on every push: app (tsc + 97 tests), functions (build + 36 tests), **Firestore rules (21 emulator tests on Temurin 21)**. Lint not yet wired.
 - [ ] Automated builds — **local Android builds only until revenue** ($0 budget; EAS cloud builds and Apple's $99/yr are "when revenue exists" upgrades). Web deploy via a free tier (Firebase Hosting free / Cloudflare Pages).
 - [ ] EAS Update (OTA) channel strategy defined (prod/staging).
 - [ ] Release smoke-test checklist run against a production build before promotion.

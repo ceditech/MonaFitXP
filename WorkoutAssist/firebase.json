@@ -15,6 +15,40 @@
       "firebase-debug.*.log"
     ]
   },
+  "hosting": {
+    "public": "app/dist",
+    "_comment_ignore": "Do NOT add '**/node_modules/**' here. app/dist is Expo web build output, and `expo export` emits vendored fonts to assets/node_modules/@expo/vector-icons/**. The usual Firebase boilerplate ignore silently drops those 30 files, and the SPA rewrite then serves index.html for the .ttf request, so the browser parses HTML as a font and every icon renders as a tofu box.",
+    "ignore": [
+      "firebase.json",
+      "**/.*"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|css|png|jpg|jpeg|gif|svg|webp|mp4|ttf|otf|woff|woff2|glb)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      },
+      {
+        "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      }
+    ]
+  },
   "emulators": {
     "firestore": {
       "port": 8080

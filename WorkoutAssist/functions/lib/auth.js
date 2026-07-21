@@ -1,7 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ensureEntitlementDoc = void 0;
-const functions = require("firebase-functions");
+// v1 API: firebase-functions v6 repointed the root export to the v2 API, and v2 has no
+// equivalent of auth.user().onCreate (only Identity Platform blocking triggers). Keeping
+// this on the explicit /v1 entrypoint preserves the deployed trigger exactly.
+const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 if (!admin.apps.length) {
     admin.initializeApp();
@@ -9,7 +12,11 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 exports.ensureEntitlementDoc = functions.auth.user().onCreate(async (user) => {
     const uid = user.uid;
-    console.log(`[Audit] ensureEntitlementDoc Start | User: ${uid} | Email: ${user.email}`);
+    // Log the uid only. Email in Cloud Logging puts PII in a store with a
+    // different retention and access model than Firestore, outside the reach of
+    // an account-deletion flow — so an erasure request would leave it behind.
+    // The uid is enough to correlate, and is deleted with the account.
+    console.log(`[Audit] ensureEntitlementDoc Start | User: ${uid}`);
     try {
         const batch = db.batch();
         // 1. Create Entitlement document
