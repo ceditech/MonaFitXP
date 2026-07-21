@@ -37,6 +37,16 @@ create `github-deployer@workoutassist-6e273.iam.gserviceaccount.com`.
 Least privilege matters here: this key can otherwise read every user's Firestore
 data, and it lives in a third party (GitHub).
 
+If the deploy step fails with a permission error (the `Authenticate` step succeeding
+proves only that the key parsed — it does not validate any role), the roles usually
+missing for a functions deploy are:
+
+- `Cloud Build Editor` — functions deploys go through Cloud Build
+- `Service Usage Consumer` — the CLI checks which APIs are enabled
+- `Storage Admin` — the functions source archive is staged in a GCS bucket
+
+Add them one at a time and re-run rather than granting Editor.
+
 ### 2. Add the key as a GitHub secret
 
 Create a JSON key for that account, then in the GitHub repo:
@@ -89,8 +99,19 @@ branches pushing frequently could approach the cap — narrow the `push:` trigge
 which lets GitHub mint short-lived tokens and removes the long-lived key entirely.
 Also free. The current setup is standard practice; WIF is better practice.
 
-## Runtime note
+## Runtime note — Node 20 is a ceiling, not a preference
 
-All four jobs pin Node 22, matching `functions/engines.node`. **If you change the
+All four jobs pin Node 20, matching `functions/engines.node`. **If you change the
 Functions runtime, change the workflow in the same commit** — CI silently testing on
 a different runtime than production is exactly the kind of gap that ships bugs.
+
+**Do not bump this to 22.** Both functions are Cloud Functions 1st gen, and GCF Gen1
+does not support `nodejs22`. It passes every local check and fails only at deploy:
+
+```
+Runtime 'nodejs22' is not supported on GCF Gen1
+```
+
+That broke the first production deploy on 2026-07-21. Full explanation, including
+why the auth trigger pins the project to Gen1 and the 2026-10-30 nodejs20
+decommission deadline, is at the top of `functions/src/index.ts`.
