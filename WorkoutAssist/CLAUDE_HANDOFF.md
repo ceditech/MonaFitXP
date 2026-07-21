@@ -35,7 +35,7 @@ The developer is bootstrapping: **no paid services, tiers, or subscriptions may 
 
 Full narrative history — architecture decisions, every gotcha, exact tool params — lives in Claude's memory system (not duplicated here):
 - `mocap-video-pipeline.md` — **the main log**: Mixamo→Blender + fal/Seedance/Kling pipeline, every round of fixes, exact model params
-- `native-android-setup.md` — **read before ANY native work**: the four blockers that made native unbuildable, plus this machine's Windows build prerequisites
+- `native-android-setup.md` — **read before ANY native work**: how to actually run the app on the emulator (fast path = no rebuild), the four blockers that made native unbuildable, and this machine's Windows build prerequisites. Mirrors the RUNBOOK below.
 - `rigged-glb-demos.md` — the Blender GLB pipeline (still the fallback for exercises without a video)
 - `rnweb-onlayout-unreliable.md` — **read before any layout/measurement work** (see Gotchas)
 - `bash-env-split.md` — Bash tool ≠ the user's real terminal for AppData/global caches (matters if touching the Mixamo MCP)
@@ -93,6 +93,73 @@ GOOGLE_CLOUD_PROJECT=workoutassist-6e273 npm run seed
 - **Verify UI changes with a screenshot, not just DOM metrics.** The tofu bug passed every DOM check (font "registered", glyphs measured 19×28 — that was the tofu box itself). Only the screenshot caught it.
 - Fonts/assets are served `immutable, max-age=1yr`. Filenames are content-hashed so that's correct — but a *bad* deploy gets cached hard. If you see stale/broken assets, verify with `fetch(url, {cache:'reload'})` before assuming the server is wrong.
 - The agent's shell **cannot run the Firestore emulator** (Java NIO `Selector.open()` fails, same root cause as Gradle) — run `npm run test:rules` from your own terminal with `JAVA_HOME` set to a **JDK 21+** (Android Studio's JBR works; PATH default is 17). CI runs it fine on Temurin 21.
+
+## Run the app locally — RUNBOOK (start here if you need the app running)
+
+Paths on this machine: SDK `C:\Users\CedricYovodevi\AppData\Local\Android\Sdk`, AVD `Medium_Phone_API_36.1`, package `com.workoutassist`.
+
+### Web (fastest — no native toolchain at all)
+```bash
+cd app && npx expo start --web        # http://localhost:8081
+```
+
+### Android — FAST PATH (no rebuild; use this ~90% of the time)
+**The APK persists on the emulator across restarts.** If you only changed JS/TS you do **not** need Gradle, `subst`, or a rebuild — just Metro + a JS reload:
+```bash
+SDK="$LOCALAPPDATA/Android/Sdk"
+
+# 1. boot the emulator (background; ~60-90s to finish booting)
+"$SDK/emulator/emulator.exe" -avd Medium_Phone_API_36.1 -no-snapshot-load -no-boot-anim &
+
+# 2. wait until it is actually ready
+"$SDK/platform-tools/adb.exe" wait-for-device
+until [ "$("$SDK/platform-tools/adb.exe" shell getprop sys.boot_completed | tr -d '\r')" = "1" ]; do sleep 3; done
+
+# 3. start Metro (from app/)
+cd app && npx expo start          # add --clear after ANY babel/metro config change
+
+# 4. point the device at Metro, then launch the already-installed app
+"$SDK/platform-tools/adb.exe" reverse tcp:8081 tcp:8081
+"$SDK/platform-tools/adb.exe" shell am start -n com.workoutassist/.MainActivity
+```
+`adb reverse` is the step that gets forgotten — without it the app cannot reach Metro and sits on a blank/splash screen.
+
+**Driving and observing it (all of this works from an agent shell):**
+```bash
+adb exec-out screencap -p > shot.png          # screenshot — USE THIS (see gotcha below)
+adb logcat -d -s ReactNativeJS:V | tail -30   # JS console output
+adb shell dumpsys activity activities | grep -m1 topResumedActivity   # what is foreground
+adb shell input tap <x> <y>                   # tap; coords come from the screencap
+```
+
+### Android — REBUILD PATH (only when native deps/config change)
+Needed after: adding/removing a native module, `app.json` plugin changes, `expo prebuild`, or edits to the dependency `overrides`.
+```cmd
+subst W: C:\Users\CedricYovodevi\sources\repo\SaaS-App\MonaFitXP\WorkoutAssist
+W:
+cd W:\app
+npx expo run:android
+```
+- **`subst` is mandatory** (MAX_PATH) and is **per-logon-session — it disappears on reboot**, so re-run it each time.
+- **Must run in the user's own terminal**, not an agent shell (see Gotchas below).
+- If `expo prebuild --clean` was run, first recreate `app/android/local.properties` containing `sdk.dir=C\:\\Users\\CedricYovodevi\\AppData\\Local\\Android\\Sdk` — `--clean` deletes it every time.
+
+### Troubleshooting — every failure actually hit, and its fix
+| Symptom | Cause → Fix |
+|---|---|
+| `Unable to establish loopback connection` (Gradle **or** Firestore emulator) | McAfee firewall blocking Java's NIO `Selector.open()` → allow both `java.exe`, or disable that firewall. **Also fails in agent shells regardless of McAfee** — the user must run these. |
+| `Filename longer than 260 characters` | MAX_PATH → `subst W:` and build from `W:\app`. |
+| `SDK location not found` | `app/android/local.properties` missing (deleted by `prebuild --clean`) → recreate it with `sdk.dir`. |
+| `ReferenceError: Property 'require' doesn't exist` + `AppRegistryBinding::startSurface failed` | `babel.config.js` not using `babel-preset-expo` → fix it, then **`expo start --clear`** (a stale cache keeps reproducing it). |
+| Instant crash; logcat shows `NoSuchMethodError: getDirectConverter` | `expo-font` hoisted to v57 → keep the `overrides` block in `app/package.json`. |
+| Gradle: `Plugin with id 'maven' not found` | `expo-file-system` hoisted to v13 (SDK-44 era) → same `overrides` block. |
+| App hangs forever on the loading spinner | Firebase auth taking the web path → `src/firebase/firebase.native.ts` must exist (`initializeAuth` + AsyncStorage persistence). |
+| Expo Go fails with a `require` error | **This is a bare/prebuilt project — Expo Go cannot run it.** Use the dev build (`expo run:android`). |
+| Blank screen, never connects to Metro | forgot `adb reverse tcp:8081 tcp:8081`, or Metro isn't running / 8081 is taken. |
+| `Port 8081 already in use` | kill the stale Metro: `netstat -ano \| grep :8081` then `taskkill //F //PID <pid>`. |
+| `firebase-tools no longer supports Java version before 21` | PATH default is JDK 17 → `set "JAVA_HOME=C:\Program Files\Android\Android Studio\jbr"` **and** `set "PATH=%JAVA_HOME%\bin;%PATH%"` (JAVA_HOME alone is not enough; firebase-tools resolves `java` from PATH). |
+
+**The gotcha that cost the most time:** *verify UI with a screenshot, not DOM/metric checks.* The tab-icon "tofu box" bug passed every programmatic check — the font reported as registered and glyphs measured 19×28, which was the tofu box itself. Only `adb exec-out screencap` (and a browser screenshot on web) revealed it.
 
 ## Building natively on this machine (Windows) — prerequisites
 
