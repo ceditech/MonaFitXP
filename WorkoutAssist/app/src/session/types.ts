@@ -8,6 +8,8 @@ export interface SessionState {
     mode: SessionMode;
     isLoading: boolean;
     onboardingCompleted?: boolean;
+    /** ISO timestamp set when the user skipped onboarding; suppresses the wizard. */
+    onboardingSkippedAt?: string;
     userProfile?: any; // Avoiding circular dependency if possible, or use a specific interface
 }
 

@@ -13,6 +13,8 @@ import { useSession } from '../../session/SessionProvider';
 import { useWorkoutRepo } from '../../repositories';
 import { UserProfile } from '../../data/contracts/IWorkoutRepository';
 import { Colors } from '../../shared/ui/Theme';
+import { useEntitlement } from '../../core/entitlements/EntitlementProvider';
+import { selectPlanTemplate } from './selectPlanTemplate';
 
 
 const STEPS = [
@@ -54,6 +56,7 @@ const INJURIES = [
 export const OnboardingWizard = ({ navigation }: any) => {
     const { session, refreshProfile } = useSession();
     const repo = useWorkoutRepo();
+    const { tier } = useEntitlement();
 
     const [currentStep, setCurrentStep] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
@@ -111,10 +114,18 @@ export const OnboardingWizard = ({ navigation }: any) => {
         track('onboarding_skipped');
         setIsSaving(true);
         try {
+            // Record the skip rather than leaving onboardingCompleted false on its
+            // own. RootNavigator mounts the wizard whenever onboarding is not
+            // finished, so without this marker "Skip" re-showed the wizard on every
+            // single launch — there was no way to dismiss it short of completing it.
             await repo.saveUserProfile(session.uid!, {
                 onboardingCompleted: false,
+                onboardingSkippedAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             });
+            // Push the flag into session state now; otherwise the navigator still
+            // has the stale value and bounces straight back to the wizard.
+            await refreshProfile();
             navigation.replace('MainTabs', { screen: 'HomeToday' });
         } catch (error) {
             Alert.alert('Error', 'Failed to save progress. Please try again.');
@@ -135,11 +146,25 @@ export const OnboardingWizard = ({ navigation }: any) => {
                 onboardingCompleted: true,
             });
 
-            // 2. Create and Activate a default plan based on goal
+            // 2. Create and Activate a starting plan.
+            // Ranked on difficulty/schedule/equipment (and goal once templates
+            // carry one), with premium templates excluded for free users.
             const templates = await repo.getPlanTemplates();
-            const goalTemplate = templates.find(t => t.id.toLowerCase().includes(formData.goal || '')) || templates[0];
+            const { template: goalTemplate, reason, score } = selectPlanTemplate(
+                templates,
+                formData,
+                tier,
+            );
+
+            if (!goalTemplate) {
+                // Not fatal — the user still gets an account and can pick a plan
+                // manually. Logged because it means the catalog is empty or
+                // entirely gated, which is a seeding/config problem.
+                console.warn(`[OnboardingWizard] No plan template assigned (${reason}), tier=${tier}`);
+            }
 
             if (goalTemplate) {
+                console.log(`[OnboardingWizard] Selected plan "${goalTemplate.name}" (score=${score})`);
                 const planId = await repo.createUserPlan(session.uid, {
                     templateId: goalTemplate.id,
                     scheduleDays: formData.preferredDays || ['Mon', 'Wed', 'Fri'],

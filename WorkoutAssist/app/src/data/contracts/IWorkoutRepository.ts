@@ -40,6 +40,12 @@ export interface PlanTemplate {
   shortDescription: string;
   equipment: string[];
   blocks: PlanTemplateBlock[];
+  /**
+   * Which training goal this template serves. Optional because no seeded
+   * template carries it yet — onboarding's template selection falls back to
+   * difficulty/schedule/equipment until they do. See selectPlanTemplate.ts.
+   */
+  goal?: 'strength' | 'hypertrophy' | 'fat_loss' | 'mobility';
 }
 
 export interface UserProfile {
@@ -59,6 +65,12 @@ export interface UserProfile {
   sessionMinutes?: number;
   timezone?: string;
   onboardingCompleted?: boolean;
+  /**
+   * Set when the user pressed "Skip". Distinct from onboardingCompleted so the
+   * wizard can be re-offered later without being forced on every launch, and so
+   * skippers stay distinguishable from finishers in analytics.
+   */
+  onboardingSkippedAt?: string;
 
   // Notification Preferences
   notificationPrefs?: {

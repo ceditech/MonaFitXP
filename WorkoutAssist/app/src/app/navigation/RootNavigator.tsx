@@ -93,11 +93,13 @@ const TabNavigator = () => (
 
 const MainNavigator = () => {
     const { session } = useSession();
-    const { onboardingCompleted } = session;
+    const { onboardingCompleted, onboardingSkippedAt } = session;
 
     return (
         <MainStack.Navigator screenOptions={{ headerShown: false }}>
-            {!onboardingCompleted && (
+            {/* Skipping counts as dismissing: without the skip check the wizard
+                remounted on every launch and "Skip" was effectively a no-op. */}
+            {!onboardingCompleted && !onboardingSkippedAt && (
                 <MainStack.Screen name="OnboardingWizard" component={OnboardingWizard} />
             )}
             <MainStack.Screen name="MainTabs" component={TabNavigator} />
