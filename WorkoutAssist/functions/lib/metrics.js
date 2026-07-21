@@ -1,7 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onWorkoutCompleted = void 0;
-const functions = require("firebase-functions");
+// v1 API — see auth.ts. Migrating this to v2 (onDocumentWritten) would change the
+// deployed trigger's identity and force a delete/recreate; deliberately deferred.
+const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const metricsCompute_1 = require("./metricsCompute");
 const xpCompute_1 = require("./xpCompute");

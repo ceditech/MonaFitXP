@@ -1,5 +1,8 @@
 
-import * as functions from 'firebase-functions';
+// v1 API: firebase-functions v6 repointed the root export to the v2 API, and v2 has no
+// equivalent of auth.user().onCreate (only Identity Platform blocking triggers). Keeping
+// this on the explicit /v1 entrypoint preserves the deployed trigger exactly.
+import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 
 if (!admin.apps.length) {

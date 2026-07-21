@@ -1,6 +1,7 @@
-# Minimal regression net: typecheck + unit tests on every push and PR.
-# Deliberately no builds, no deploys, no secrets — those come in the
-# production-readiness phase (EAS builds, source-map upload, etc.).
+# Regression net: typecheck + unit tests on every push and PR.
+# Since 2026-07-21 this also deploys: a green push to main ships rules,
+# indexes, functions and hosting to production. See the `deploy` job below,
+# and docs/CI_CD.md for the one-time secret setup.
 name: CI
 
 on:
@@ -10,7 +11,9 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded test runs are cancelled, but never cancel an in-flight deploy —
+  # a half-applied Firebase deploy is worse than a redundant one.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   app:
@@ -23,7 +26,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: WorkoutAssist/app/package-lock.json
       - name: Install
@@ -43,7 +46,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: WorkoutAssist/functions/package-lock.json
       - name: Install
@@ -63,7 +66,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: WorkoutAssist/functions/package-lock.json
       # The Firestore emulator is a Java process; firebase-tools requires JDK 21+.
@@ -78,3 +81,64 @@ jobs:
       # (anti-cheat) and server-only entitlements (no self-granted Pro).
       - name: Security-rules tests
         run: npm run test:rules
+
+  deploy:
+    name: Deploy to Firebase (production)
+    # Production is only ever reached through three green jobs.
+    needs: [app, functions, rules]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # Declared so you can attach required reviewers in repo Settings →
+    # Environments without touching this file.
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Build functions
+        working-directory: WorkoutAssist/functions
+        # Must build before deploying: there is no predeploy hook, so a stale
+        # lib/ would ship silently.
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build web bundle
+        working-directory: WorkoutAssist/app
+        # firebaseConfig.ts is compiled in (public by design) — no build secrets.
+        run: |
+          npm ci
+          npx expo export -p web
+
+      - name: Authenticate to Firebase
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        # Key is written under RUNNER_TEMP, outside the workspace, so no later
+        # step or cache can pick it up. Removed again in the final step.
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT secret is not set — see docs/CI_CD.md"
+            exit 1
+          fi
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/gcp-key.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/gcp-key.json" >> "$GITHUB_ENV"
+
+      - name: Deploy rules, indexes, functions, hosting
+        working-directory: WorkoutAssist
+        env:
+          # The discovery handshake needs longer than the default 10s.
+          FUNCTIONS_DISCOVERY_TIMEOUT: '120'
+        run: |
+          npx --yes firebase-tools@15 deploy \
+            --only firestore:rules,firestore:indexes,functions,hosting \
+            --project workoutassist-6e273 \
+            --non-interactive \
+            --force
+
+      - name: Remove credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/gcp-key.json"
