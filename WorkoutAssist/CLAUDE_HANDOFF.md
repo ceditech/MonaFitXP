@@ -1,6 +1,23 @@
 # Claude Handoff — WorkoutAssist / MonaFitXP
 
-_Last updated: 2026-07-19. Read this first in a new session, then pull the referenced memory files for full detail._
+_Last updated: 2026-07-21. Read this first in a new session, then pull the referenced memory files for full detail._
+
+## 🚀 THE APP IS LIVE
+
+**https://workoutassist-6e273.web.app** — full stack deployed to Firebase project `workoutassist-6e273` (Blaze, billing enabled) on 2026-07-21.
+
+| Layer | State |
+|---|---|
+| Web hosting | ✅ Firebase Hosting (free Spark product), 91 files, SPA rewrite, immutable asset caching |
+| Firestore rules + indexes | ✅ Deployed — **fixed stale prod rules that were missing `customExercises` entirely** |
+| Cloud Functions | ✅ `onWorkoutCompleted`, `ensureEntitlementDoc` (us-central1, nodejs20) |
+| Catalog seed | ✅ 20 exercises + 4 plan templates, enriched fields (instructions/formTip/animationKey) |
+| Observability | ✅ Sentry + GA4 (`G-NX4W2PEQXD`) verified transmitting |
+| CI | ✅ 3 green jobs on every push (app, functions, Firestore rules) |
+
+**Real accounts work end-to-end**: signup → `ensureEntitlementDoc` → rich catalog → workout → `onWorkoutCompleted` computes streak/PRs/XP server-side.
+
+**⚠️ NOT yet verified in production:** the authenticated path has never been exercised live — no account has been created on prod. Deliberately left to the owner (avoids a junk user record). **This is the #1 next action.**
 
 ## Where things stand
 
@@ -48,6 +65,35 @@ Full narrative history — architecture decisions, every gotcha, exact tool para
 - **Android (emulator, dev build, Jul 19)** — verified live: Welcome → guest → Home, **tab-bar icons** (all 5 distinct, active tinted), **expo-video** playback (squat + regenerated bench press), the **carousel including its native `.measure()` path** and chevron paging, **expo-gl/three.js** 3D demos, and the id-keyed video registry (Leg Press correctly shows 3D, not the squat video).
 - **Full workout loop verified on Android**: Start Workout → set logging → rest-timer overlay → Finish Workout → Summary → **Share Workout** (branded card captured via `react-native-view-shot`, handed to the Android share sheet by `expo-sharing`). **iOS remains entirely unverified** (no macOS host), and Android has only run on an emulator, not physical hardware.
 
+## Deploy runbook (Firebase) — hard-won, don't rediscover these
+
+Project `workoutassist-6e273`. All commands from `WorkoutAssist/`.
+
+```bash
+# 1. Rules + indexes
+npx firebase deploy --only firestore:rules,firestore:indexes --project workoutassist-6e273
+
+# 2. Functions — ALWAYS build first (there is no predeploy hook, stale lib/ would ship)
+cd functions && npm run build && cd ..
+FUNCTIONS_DISCOVERY_TIMEOUT=120 npx firebase deploy --only functions --project workoutassist-6e273
+
+# 3. Web
+cd app && npx expo export -p web && cd ..     # -> app/dist (gitignored, ~20MB, 91 files)
+npx firebase deploy --only hosting --project workoutassist-6e273
+
+# 4. Catalog seed (idempotent, set+merge, no deletes)
+gcloud auth application-default login          # once; ADC, no service-account key needed
+npm install                                    # root deps (firebase-admin) — easy to forget
+GOOGLE_CLOUD_PROJECT=workoutassist-6e273 npm run seed
+```
+
+**Gotchas that cost real time:**
+- **`FUNCTIONS_DISCOVERY_TIMEOUT=120` is required** on this machine. The default 10s fails with *"User code failed to load. Cannot determine backend specification."* The code is fine — it loads in ~300ms; the discovery handshake is just slow to come up here.
+- **Never add `**/node_modules/**` to the hosting `ignore`.** `expo export` emits vendored icon fonts to `assets/node_modules/@expo/vector-icons/**`. That pattern silently drops 30 of 91 files; the SPA rewrite then answers the missing `.ttf` with `index.html`, the browser parses HTML as a font, and **every icon renders as a tofu box**. A comment in `firebase.json` guards this.
+- **Verify UI changes with a screenshot, not just DOM metrics.** The tofu bug passed every DOM check (font "registered", glyphs measured 19×28 — that was the tofu box itself). Only the screenshot caught it.
+- Fonts/assets are served `immutable, max-age=1yr`. Filenames are content-hashed so that's correct — but a *bad* deploy gets cached hard. If you see stale/broken assets, verify with `fetch(url, {cache:'reload'})` before assuming the server is wrong.
+- The agent's shell **cannot run the Firestore emulator** (Java NIO `Selector.open()` fails, same root cause as Gradle) — run `npm run test:rules` from your own terminal with `JAVA_HOME` set to a **JDK 21+** (Android Studio's JBR works; PATH default is 17). CI runs it fine on Temurin 21.
+
 ## Building natively on this machine (Windows) — prerequisites
 
 Native builds fail without these; see `native-android-setup.md` for the full diagnosis.
@@ -59,10 +105,12 @@ Native builds fail without these; see `native-android-setup.md` for the full dia
 
 ## Immediate next steps (priority order)
 
-1. **iOS bring-up** (needs a macOS host) and Android QA on **physical hardware** — the remaining native gaps. Re-verifying Android needs only Metro + `adb reverse tcp:8081 tcp:8081`; the APK persists across emulator restarts, so no rebuild/`subst`/Gradle.
-2. ~~Plan the media → Firebase Storage / CDN migration~~ — **deferred to after first revenue** ($0-budget constraint above). Bundled media (~12.9 MB) stays bundled; it works offline and costs nothing.
-3. **Production readiness** (nothing exists yet): CI/CD, crash reporting, real analytics, App Check, Remote Config, data-deletion flow.
-4. **Upgrade or replace `expo-three@8.0.0`** to remove the dependency-override workarounds.
+1. **Verify the authenticated flow on production.** Sign up on https://workoutassist-6e273.web.app with a real email, then confirm: `users/{uid}/entitlements/current` was created by `ensureEntitlementDoc`; the catalog loads with Pro Tips; completing a workout makes `onWorkoutCompleted` write `users/{uid}/metrics/summary` + `metrics/gamification`. Check `firebase functions:log`. **Nothing else should ship before this passes.**
+2. **Firebase App Check** (free) — the backend is now publicly reachable and this is the main abuse defense. Still an open §0 blocker.
+3. **Node.js 20 → 22 + `firebase-functions` v5 → v6.** Runtime is **decommissioned 2026-10-30**; after that functions cannot deploy. v6 has breaking changes, so do it while nothing urgent depends on it.
+4. **Compliance for a public beta**: privacy policy + ToS that actually resolve, health disclaimer, and the account-deletion flow (also a store requirement, and now meaningful since real accounts exist).
+5. **Get real users on it** and let their behaviour decide payments vs. AI Coach. Entitlement tests must be written *before* any payments work.
+6. **Deferred by choice** (do not resurrect without a trigger): media→CDN migration (after first revenue), iOS bring-up (needs a macOS host), Android physical-device QA, `expo-three@8` upgrade (would remove the dependency overrides).
 
 See `docs/APP_FEATURES.md` (reconciled 2026-07-19) for the full A/B/C/D breakdown of implemented / in-progress / remaining / needs-improvement.
 
