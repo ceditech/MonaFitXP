@@ -45,6 +45,9 @@ const EQUIPMENT = [
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+// Health data (GDPR Art. 9), so firestore.rules pins these ids to a closed
+// vocabulary. Adding an entry here WITHOUT adding it to validInjuryFlags() in
+// firestore.rules makes the profile write fail with a permission error.
 const INJURIES = [
     { id: 'knees', label: 'Knees' },
     { id: 'lower_back', label: 'Lower Back' },

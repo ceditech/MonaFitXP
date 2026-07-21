@@ -129,6 +129,66 @@ describe('user subcollections (workouts, plans)', () => {
     });
 });
 
+describe('profile PII validation', () => {
+    it('accepts a profile with no health fields at all', async () => {
+        await assertSucceeds(
+            setDoc(doc(asUser(ALICE), `users/${ALICE}`), { name: 'Alice', daysPerWeek: 3 }),
+        );
+    });
+
+    it('accepts injuryFlags drawn from the known vocabulary', async () => {
+        await assertSucceeds(
+            setDoc(doc(asUser(ALICE), `users/${ALICE}`), {
+                injuryFlags: ['knees', 'lower_back'],
+            }),
+        );
+    });
+
+    it('rejects unknown injury ids, a non-list, and an over-long list', async () => {
+        await assertFails(
+            setDoc(doc(asUser(ALICE), `users/${ALICE}`), { injuryFlags: ['knees', 'freetext'] }),
+        );
+        await assertFails(
+            setDoc(doc(asUser(ALICE), `users/${ALICE}`), { injuryFlags: 'knees' }),
+        );
+        await assertFails(
+            setDoc(doc(asUser(ALICE), `users/${ALICE}`), {
+                injuryFlags: Array.from({ length: 21 }, () => 'knees'),
+            }),
+        );
+    });
+
+    it('lets a profile set dateOfBirth once', async () => {
+        await assertSucceeds(
+            setDoc(doc(asUser(ALICE), `users/${ALICE}`), { dateOfBirth: '1990-05-01' }),
+        );
+    });
+
+    it('blocks editing dateOfBirth after it is set (age-gate tamper)', async () => {
+        await seed(`users/${ALICE}`, { dateOfBirth: '1990-05-01' });
+        await assertFails(
+            setDoc(
+                doc(asUser(ALICE), `users/${ALICE}`),
+                { dateOfBirth: '2010-05-01' },
+                { merge: true },
+            ),
+        );
+    });
+
+    it('still allows unrelated profile edits once dateOfBirth is set', async () => {
+        await seed(`users/${ALICE}`, { dateOfBirth: '1990-05-01', daysPerWeek: 3 });
+        await assertSucceeds(
+            setDoc(doc(asUser(ALICE), `users/${ALICE}`), { daysPerWeek: 5 }, { merge: true }),
+        );
+    });
+
+    it("blocks writing health data into another user's profile", async () => {
+        await assertFails(
+            setDoc(doc(asUser(BOB), `users/${ALICE}`), { injuryFlags: ['knees'] }),
+        );
+    });
+});
+
 describe('custom exercises validation', () => {
     const valid = { name: 'My Lift', muscles: ['chest'] };
 

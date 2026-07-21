@@ -12,7 +12,11 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 exports.ensureEntitlementDoc = functions.auth.user().onCreate(async (user) => {
     const uid = user.uid;
-    console.log(`[Audit] ensureEntitlementDoc Start | User: ${uid} | Email: ${user.email}`);
+    // Log the uid only. Email in Cloud Logging puts PII in a store with a
+    // different retention and access model than Firestore, outside the reach of
+    // an account-deletion flow — so an erasure request would leave it behind.
+    // The uid is enough to correlate, and is deleted with the account.
+    console.log(`[Audit] ensureEntitlementDoc Start | User: ${uid}`);
     try {
         const batch = db.batch();
         // 1. Create Entitlement document
