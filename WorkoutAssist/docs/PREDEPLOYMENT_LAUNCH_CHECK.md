@@ -13,17 +13,16 @@ This reflects the real state of the codebase — not aspirational planning.
 - [ ] **Real payment integration** for Plus/Pro (currently a "Stripe flow coming soon" stub). No purchases can be made.
 - [ ] **Server-side purchase verification** writing entitlements from trusted backend events only.
 - [ ] **Firebase App Check** enabled (Auth, Firestore, Functions) to stop API abuse.
-- [ ] **Firestore security rules reviewed and hardened** for every read/write path, then tested.
-- [ ] **Crash reporting** wired (Crashlytics / Sentry) so production crashes are visible.
+- [x] **Firestore security rules reviewed and hardened** for every read/write path, then tested — audited 2026-07-20 (no privilege-escalation path: tier is read from the server-only `entitlements` doc) and pinned by **21 emulator-backed rules tests** that run in CI on every push.
+- [x] **Crash reporting** wired — **Sentry** (free tier) initialised before root registration, `Sentry.wrap(App)`, and the global `ErrorBoundary.onError` reports render-phase crashes. Verified delivering to the dashboard.
 - [ ] **User data deletion / account deletion flow** (App Store & Play Store requirement).
-- [ ] **Rotate all secrets** that touched development chats or logs (see §1).
 
 ---
 
 ## 1. Security & Secrets
 
 - [x] `.env` is gitignored; no secrets committed (`.env.example` documents keys).
-- [ ] **Rotate the BFL (Flux) API key** — it appeared in plaintext during development. Regenerate at `dashboard.bfl.ai` and update `.env`.
+- [x] ~~Rotate the BFL (Flux) API key~~ — **descoped 2026-07-20 (owner decision).** `.env` is gitignored and was never pushed; BFL is not called at runtime (the 35 hero images are already generated and bundled), so the blast radius is limited to BFL image credits. Rotate opportunistically at `dashboard.bfl.ai` if ever desired. **The BFL commercial-licensing question (§8) is unaffected and still open.**
 - [ ] Audit for any other keys/tokens in logs, chat history, or committed files.
 - [ ] Confirm Firebase config in the client is the intended project and has no admin/service-account keys bundled.
 - [ ] Service account keys live only in `secrets/` (gitignored) and CI secret stores — never in the repo.
