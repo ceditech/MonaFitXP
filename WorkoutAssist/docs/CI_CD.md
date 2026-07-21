@@ -64,10 +64,15 @@ gate protects against *failing* tests, not against *skipping* the PR.
 the right pattern. Every merge to `main` is now a production release — treat it that way.
 
 **A deploy is not atomic.** `firebase deploy` applies rules, functions and hosting
-sequentially. A failure partway leaves production mixed (e.g. new rules, old functions).
-The safe ordering is already encoded — rules before functions before hosting — so a
-half-deploy is backward-compatible rather than broken. Still: check the Actions log
-before assuming a red run changed nothing.
+sequentially, and a failure partway leaves production mixed (e.g. new rules, old
+functions). The order is chosen internally by firebase-tools — it is **not** controlled
+by the order of the `--only` flags, so do not assume a particular sequence when
+reasoning about a partial failure. Read the Actions log to see how far it actually got;
+never assume a red run changed nothing.
+
+The practical consequence: keep each merge to `main` small enough that a partial apply
+is easy to reason about. Shipping a rules tightening and a functions rewrite in one
+merge is what makes a half-deploy hard to diagnose.
 
 **Rollback:**
 - Hosting — Firebase Console → Hosting → previous release → "Rollback" (instant).
