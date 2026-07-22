@@ -12,7 +12,7 @@
         "test:rules": "firebase emulators:exec --only firestore --project demo-workoutassist --config ../firebase.json \"jest --config jest.rules.config.js\""
     },
     "engines": {
-        "node": "20"
+        "node": "22"
     },
     "main": "lib/index.js",
     "dependencies": {
