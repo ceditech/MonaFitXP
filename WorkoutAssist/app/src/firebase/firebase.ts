@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, browserLocalPersistence, setPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getFunctions } from "firebase/functions";
 import { firebaseConfig } from "./firebaseConfig";
 
 // Initialize Firebase
@@ -18,4 +19,8 @@ setPersistence(auth, browserLocalPersistence).catch((error) => {
 // Initialize Firestore
 const db = getFirestore(firebaseApp);
 
-export { firebaseApp, auth, db };
+// Callable Cloud Functions (deleteAccount, exportMyData). Region must match the
+// deployed functions (us-central1) or callables resolve to the wrong host.
+const functions = getFunctions(firebaseApp, "us-central1");
+
+export { firebaseApp, auth, db, functions };

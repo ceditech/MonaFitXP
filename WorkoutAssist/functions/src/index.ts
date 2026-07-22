@@ -23,3 +23,4 @@
  */
 export { onWorkoutCompleted } from './metrics';
 export { ensureEntitlementDoc } from './auth';
+export { deleteAccount, exportMyData } from './account';

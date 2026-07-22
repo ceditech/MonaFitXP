@@ -30,6 +30,7 @@ import { WorkoutDetailScreen } from '../../features/history/WorkoutDetailScreen'
 import { ProgressDashboardScreen } from '../../features/history/ProgressDashboardScreen';
 import { SettingsScreen } from '../../features/home/SettingsScreen';
 import { NotificationPrefsScreen } from '../../features/home/NotificationPrefsScreen';
+import { DeleteAccountScreen } from '../../features/home/DeleteAccountScreen';
 import { PaywallScreen } from '../../features/home/PaywallScreen';
 import { UpgradeScreen } from '../../pages/UpgradeScreen';
 import { AICoachScreen } from '../../pages/AICoachScreen';
@@ -114,6 +115,7 @@ const MainNavigator = () => {
                 <MainStack.Screen name="ProgressDashboard" component={ProgressDashboardScreen} />
                 <MainStack.Screen name="Settings" component={SettingsScreen} />
                 <MainStack.Screen name="NotificationPrefs" component={NotificationPrefsScreen} />
+                <MainStack.Screen name="DeleteAccount" component={DeleteAccountScreen} options={{ title: 'Delete Account' }} />
                 <MainStack.Screen name="Upgrade" component={UpgradeScreen} />
                 {session.mode === 'guest' && (
                     <MainStack.Screen

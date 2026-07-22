@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ensureEntitlementDoc = exports.onWorkoutCompleted = void 0;
+exports.exportMyData = exports.deleteAccount = exports.ensureEntitlementDoc = exports.onWorkoutCompleted = void 0;
 /**
  * Runtime: Node 22. Both functions are Cloud Functions 1st gen (v1 API).
  *
@@ -28,4 +28,7 @@ var metrics_1 = require("./metrics");
 Object.defineProperty(exports, "onWorkoutCompleted", { enumerable: true, get: function () { return metrics_1.onWorkoutCompleted; } });
 var auth_1 = require("./auth");
 Object.defineProperty(exports, "ensureEntitlementDoc", { enumerable: true, get: function () { return auth_1.ensureEntitlementDoc; } });
+var account_1 = require("./account");
+Object.defineProperty(exports, "deleteAccount", { enumerable: true, get: function () { return account_1.deleteAccount; } });
+Object.defineProperty(exports, "exportMyData", { enumerable: true, get: function () { return account_1.exportMyData; } });
 //# sourceMappingURL=index.js.map
