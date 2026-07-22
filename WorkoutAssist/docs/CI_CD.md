@@ -37,15 +37,31 @@ create `github-deployer@workoutassist-6e273.iam.gserviceaccount.com`.
 Least privilege matters here: this key can otherwise read every user's Firestore
 data, and it lives in a third party (GitHub).
 
-If the deploy step fails with a permission error (the `Authenticate` step succeeding
-proves only that the key parsed — it does not validate any role), the roles usually
-missing for a functions deploy are:
+The `Authenticate` step succeeding proves only that the key parsed — it validates no
+role. Permission problems surface in the deploy step.
 
-- `Cloud Build Editor` — functions deploys go through Cloud Build
-- `Service Usage Consumer` — the CLI checks which APIs are enabled
-- `Storage Admin` — the functions source archive is staged in a GCS bucket
+### Enable the required APIs as an owner, once
 
-Add them one at a time and re-run rather than granting Editor.
+A functions deploy makes the CLI verify the project is on Blaze, which needs
+`cloudbilling.googleapis.com`. On 2026-07-21 the deploy failed with:
+
+```
+Error: Permissions denied enabling cloudbilling.googleapis.com.
+```
+
+The deploy service account deliberately **cannot enable APIs** — that would need
+`roles/serviceusage.serviceUsageAdmin`, which lets it turn on any API in the project.
+Enable it once by hand instead, as a project owner:
+
+<https://console.cloud.google.com/apis/library/cloudbilling.googleapis.com?project=workoutassist-6e273>
+
+`cloudfunctions`, `cloudbuild`, `artifactregistry` and `firebaseextensions` were
+already enabled and confirmed in the same log — `cloudbilling` was the only gap.
+After enabling it, the Node 22 deploy went straight through (verified 2026-07-22).
+
+If a later run fails reading (rather than enabling) billing, add
+`roles/serviceusage.serviceUsageConsumer` to the deploy account. Add roles one at a
+time and re-run; never grant Editor or Owner to close a permission error.
 
 ### 2. Add the key as a GitHub secret
 
@@ -74,15 +90,17 @@ gate protects against *failing* tests, not against *skipping* the PR.
 the right pattern. Every merge to `main` is now a production release — treat it that way.
 
 **A deploy is not atomic.** `firebase deploy` applies rules, functions and hosting
-sequentially, and a failure partway leaves production mixed (e.g. new rules, old
-functions). The order is chosen internally by firebase-tools — it is **not** controlled
-by the order of the `--only` flags, so do not assume a particular sequence when
-reasoning about a partial failure. Read the Actions log to see how far it actually got;
-never assume a red run changed nothing.
+sequentially, and a failure partway leaves production mixed. The order is chosen
+internally by firebase-tools — it is **not** controlled by the order of the `--only`
+flags, so do not assume a particular sequence when reasoning about a partial failure.
+Read the Actions log to see how far it actually got; never assume a red run changed
+nothing.
 
-The practical consequence: keep each merge to `main` small enough that a partial apply
-is easy to reason about. Shipping a rules tightening and a functions rewrite in one
-merge is what makes a half-deploy hard to diagnose.
+This is not hypothetical: the failed 2026-07-21 deploy applied Firestore indexes and
+rules, then died at the billing check before functions and hosting. Production ran
+new rules against an old client for a day — survivable only because the rules change
+was backward-compatible. Keep each merge to `main` small enough that a partial apply
+is easy to reason about.
 
 **Rollback:**
 - Hosting — Firebase Console → Hosting → previous release → "Rollback" (instant).
@@ -99,19 +117,16 @@ branches pushing frequently could approach the cap — narrow the `push:` trigge
 which lets GitHub mint short-lived tokens and removes the long-lived key entirely.
 Also free. The current setup is standard practice; WIF is better practice.
 
-## Runtime note — Node 20 is a ceiling, not a preference
+## Runtime note — Node 22
 
-All four jobs pin Node 20, matching `functions/engines.node`. **If you change the
+All four jobs pin Node 22, matching `functions/engines.node`. **If you change the
 Functions runtime, change the workflow in the same commit** — CI silently testing on
 a different runtime than production is exactly the kind of gap that ships bugs.
 
-**Do not bump this to 22.** Both functions are Cloud Functions 1st gen, and GCF Gen1
-does not support `nodejs22`. It passes every local check and fails only at deploy:
+Both functions are Cloud Functions **1st gen** (the auth trigger pins the project to
+1st gen — see `functions/src/index.ts`), and 1st gen runs `nodejs22` fine: verified
+2026-07-22 via `firebase functions:list`, both live on nodejs22.
 
-```
-Runtime 'nodejs22' is not supported on GCF Gen1
-```
-
-That broke the first production deploy on 2026-07-21. Full explanation, including
-why the auth trigger pins the project to Gen1 and the 2026-10-30 nodejs20
-decommission deadline, is at the top of `functions/src/index.ts`.
+An earlier version of this file claimed Gen1 could not run Node 22 and that the deploy
+failed for that reason. That was wrong — the deploy failed at the `cloudbilling` check
+(above), never at the runtime. Corrected here so nobody re-pins to 20 on bad advice.
