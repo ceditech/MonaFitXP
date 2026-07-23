@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, initializeAuth, type Auth } from "firebase/auth";
 import * as firebaseAuth from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getFunctions } from "firebase/functions";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { firebaseConfig } from "./firebaseConfig";
 
@@ -65,5 +66,7 @@ function createAuth(): Auth {
 
 const auth = createAuth();
 const db = getFirestore(firebaseApp);
+// Region must match the deployed functions (us-central1). See firebase.ts.
+const functions = getFunctions(firebaseApp, "us-central1");
 
-export { firebaseApp, auth, db };
+export { firebaseApp, auth, db, functions };

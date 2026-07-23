@@ -59,6 +59,12 @@ jest.mock('firebase/firestore', () =>
     serverTimestamp: jest.fn(() => 'mock-server-timestamp'),
   }),
 );
+jest.mock('firebase/functions', () =>
+  makeFirebaseModuleMock({
+    getFunctions: jest.fn(() => ({})),
+    httpsCallable: jest.fn(() => jest.fn(() => Promise.resolve({ data: {} }))),
+  }),
+);
 
 // Sentry: the native module doesn't exist in jest; keep the surface our
 // code touches (init/wrap/captureException/addBreadcrumb) as no-ops.

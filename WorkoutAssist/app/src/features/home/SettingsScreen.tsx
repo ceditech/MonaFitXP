@@ -1,13 +1,15 @@
 
 // app/src/features/home/SettingsScreen.tsx
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSession } from '../../session/SessionProvider';
 import { Colors, Spacing, Typography } from '../../shared/ui/Theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MainStackParamList } from '../../app/navigation/Routes';
+import { requestDataExport, deliverExport } from '../../data/accountApi';
+import { showAlert } from '../../shared/ui/showAlert';
 
 interface Props {
     navigation: NativeStackNavigationProp<MainStackParamList>;
@@ -16,6 +18,19 @@ interface Props {
 export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     const { session, signOut } = useSession();
     const isGuest = session.mode === 'guest';
+    const [isExporting, setIsExporting] = useState(false);
+
+    const handleExport = async () => {
+        setIsExporting(true);
+        try {
+            const data = await requestDataExport();
+            await deliverExport(data);
+        } catch (e) {
+            showAlert('Export failed', 'Could not export your data. Please try again.');
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     const renderSettingItem = (
         title: string,
@@ -99,6 +114,32 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                         '#90A4AE'
                     )}
                 </View>
+
+                {!isGuest && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionLabel}>DATA & PRIVACY</Text>
+                        <TouchableOpacity style={styles.item} onPress={handleExport} disabled={isExporting}>
+                            <View style={[styles.iconContainer, { backgroundColor: '#4DB6AC15' }]}>
+                                {isExporting ? (
+                                    <ActivityIndicator size="small" color="#4DB6AC" />
+                                ) : (
+                                    <Ionicons name="download-outline" size={22} color="#4DB6AC" />
+                                )}
+                            </View>
+                            <View style={styles.itemContent}>
+                                <Text style={styles.itemTitle}>Export My Data</Text>
+                                <Text style={styles.itemSubtitle}>Download everything we store about you</Text>
+                            </View>
+                        </TouchableOpacity>
+                        {renderSettingItem(
+                            'Delete Account',
+                            'trash-outline',
+                            () => navigation.navigate('DeleteAccount'),
+                            '#FF5252',
+                            'Permanently erase your account and data'
+                        )}
+                    </View>
+                )}
 
                 <TouchableOpacity style={styles.logoutBtn} onPress={signOut}>
                     <Ionicons name="log-out-outline" size={20} color="#FF5252" style={{ marginRight: 8 }} />

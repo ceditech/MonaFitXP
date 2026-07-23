@@ -35,6 +35,7 @@ export type MainStackParamList = {
     // Settings
     Settings: undefined;
     NotificationPrefs: undefined;
+    DeleteAccount: undefined;
     Paywall: { source?: string; templateId?: string; returnTo?: string };
     Upgrade: { reason?: string };
     AICoach: undefined;
