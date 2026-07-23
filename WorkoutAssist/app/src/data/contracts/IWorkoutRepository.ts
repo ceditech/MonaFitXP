@@ -58,6 +58,12 @@ export interface UserProfile {
   createdAt: string;
 
   // Onboarding Fields
+  /**
+   * ISO 'YYYY-MM-DD'. Write-once (enforced by firestore.rules) — it drives the
+   * under-16 age gate, so it must not be editable after being set. Age is derived
+   * from this on demand (see core/age), never stored.
+   */
+  dateOfBirth?: string;
   goal?: 'strength' | 'hypertrophy' | 'fat_loss' | 'mobility';
   experience?: 'beginner' | 'intermediate' | 'advanced';
   equipment?: string[];
