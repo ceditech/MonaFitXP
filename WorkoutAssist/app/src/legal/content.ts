@@ -17,11 +17,11 @@
 export const LEGAL_CONFIG = {
     appName: 'WorkoutAssist',
     // TODO(owner): the legal entity or individual operating the app.
-    companyName: '[Your legal name or company]',
+    companyName: 'E-DEAL EXPRESS LLC dba WorkoutAssist',
     // TODO(owner): a monitored contact address for privacy/data requests.
-    contactEmail: '[privacy@yourdomain.com]',
+    contactEmail: 'legal@workoutassist.com',
     // TODO(owner): the governing-law jurisdiction for the Terms.
-    jurisdiction: '[Your country / state]',
+    jurisdiction: 'Texas, USA',
     // Bump when any document's substance changes.
     effectiveDate: '2026-07-22',
 };
