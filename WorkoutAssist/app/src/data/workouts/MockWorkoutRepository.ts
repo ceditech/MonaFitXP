@@ -2,6 +2,7 @@
 // app/src/data/workouts/MockWorkoutRepository.ts
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ConsentRecord } from '../../core/consent/consent.model';
 import {
     IWorkoutRepository,
     Exercise,
@@ -131,6 +132,12 @@ export class MockWorkoutRepository implements IWorkoutRepository {
 
         this.memCache.set(key, updated);
         await AsyncStorage.setItem(key, JSON.stringify(updated));
+    }
+
+    async saveConsents(uid: string, consents: ConsentRecord): Promise<void> {
+        const key = `${DATA_PREFIX}${uid}_consents`;
+        this.memCache.set(key, consents);
+        await AsyncStorage.setItem(key, JSON.stringify(consents));
     }
 
     // --- Active Plan ---

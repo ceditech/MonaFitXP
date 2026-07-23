@@ -1,6 +1,8 @@
 
 // app/src/data/contracts/IWorkoutRepository.ts
 
+import { ConsentRecord } from '../../core/consent/consent.model';
+
 export interface Exercise {
   id: string;
   name: string;
@@ -186,6 +188,8 @@ export interface IWorkoutRepository {
   // User Data
   getUserProfile(uid: string): Promise<UserProfile | null>;
   saveUserProfile(uid: string, profile: Partial<UserProfile>): Promise<void>;
+  /** Write the user's versioned consent record to users/{uid}/consents/current. */
+  saveConsents(uid: string, consents: ConsentRecord): Promise<void>;
 
   // Plans
   getActivePlan(uid: string): Promise<UserPlan | null>;

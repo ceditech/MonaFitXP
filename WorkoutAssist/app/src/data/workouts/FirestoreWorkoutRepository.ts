@@ -14,6 +14,7 @@ import {
     PersonalRecord,
     GamificationState
 } from '../contracts/IWorkoutRepository';
+import { ConsentRecord } from '../../core/consent/consent.model';
 import { db } from '../../firebase/firebase';
 import {
     collection,
@@ -151,6 +152,13 @@ export class FirestoreWorkoutRepository implements IWorkoutRepository {
         } else {
             await updateDoc(docRef, data);
         }
+    }
+
+    async saveConsents(uid: string, consents: ConsentRecord): Promise<void> {
+        const docRef = doc(db, 'users', uid, 'consents', 'current');
+        // Overwrite: 'current' always holds the latest decision. The version +
+        // grantedAt on each entry preserve what was agreed to and when.
+        await setDoc(docRef, consents);
     }
 
     // --- Plans ---
