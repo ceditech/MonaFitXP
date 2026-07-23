@@ -31,6 +31,7 @@ import { ProgressDashboardScreen } from '../../features/history/ProgressDashboar
 import { SettingsScreen } from '../../features/home/SettingsScreen';
 import { NotificationPrefsScreen } from '../../features/home/NotificationPrefsScreen';
 import { DeleteAccountScreen } from '../../features/home/DeleteAccountScreen';
+import { LegalScreen } from '../../features/legal/LegalScreen';
 import { PaywallScreen } from '../../features/home/PaywallScreen';
 import { UpgradeScreen } from '../../pages/UpgradeScreen';
 import { AICoachScreen } from '../../pages/AICoachScreen';
@@ -50,6 +51,7 @@ const AuthNavigator = () => (
         <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
         <AuthStack.Screen name="SignIn" component={SignInScreen} />
         <AuthStack.Screen name="SignUp" component={SignUpScreen} />
+        <AuthStack.Screen name="Legal" component={LegalScreen} options={{ headerShown: true, title: '' }} />
     </AuthStack.Navigator>
 );
 
@@ -116,6 +118,7 @@ const MainNavigator = () => {
                 <MainStack.Screen name="Settings" component={SettingsScreen} />
                 <MainStack.Screen name="NotificationPrefs" component={NotificationPrefsScreen} />
                 <MainStack.Screen name="DeleteAccount" component={DeleteAccountScreen} options={{ title: 'Delete Account' }} />
+                <MainStack.Screen name="Legal" component={LegalScreen} options={{ title: '' }} />
                 <MainStack.Screen name="Upgrade" component={UpgradeScreen} />
                 {session.mode === 'guest' && (
                     <MainStack.Screen

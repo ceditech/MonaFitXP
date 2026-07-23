@@ -101,8 +101,18 @@ export const WelcomeScreen = ({ navigation }: any) => {
                     <View style={styles.footer}>
                         <Text style={styles.footerText}>
                             By using WorkoutAssist, you agree to our{' '}
-                            <Text style={styles.footerLink}>Terms of Service</Text> and{' '}
-                            <Text style={styles.footerLink}>Privacy Policy</Text>.
+                            <Text
+                                style={styles.footerLink}
+                                onPress={() => navigation.navigate('Legal', { doc: 'terms' })}
+                            >
+                                Terms of Service
+                            </Text> and{' '}
+                            <Text
+                                style={styles.footerLink}
+                                onPress={() => navigation.navigate('Legal', { doc: 'privacy' })}
+                            >
+                                Privacy Policy
+                            </Text>.
                         </Text>
                     </View>
                 </View>

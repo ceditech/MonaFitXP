@@ -102,15 +102,21 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                 <View style={styles.section}>
                     <Text style={styles.sectionLabel}>APP</Text>
                     {renderSettingItem(
-                        'Help & Support',
-                        'help-circle-outline',
-                        () => { },
+                        'Health & Safety Disclaimer',
+                        'fitness-outline',
+                        () => navigation.navigate('Legal', { doc: 'disclaimer' }),
                         '#90A4AE'
                     )}
                     {renderSettingItem(
-                        'Terms & Privacy',
+                        'Privacy Policy',
+                        'shield-checkmark-outline',
+                        () => navigation.navigate('Legal', { doc: 'privacy' }),
+                        '#90A4AE'
+                    )}
+                    {renderSettingItem(
+                        'Terms of Service',
                         'document-text-outline',
-                        () => { },
+                        () => navigation.navigate('Legal', { doc: 'terms' }),
                         '#90A4AE'
                     )}
                 </View>
