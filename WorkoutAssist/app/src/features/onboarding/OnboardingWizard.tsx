@@ -6,7 +6,8 @@ import {
     StyleSheet,
     TouchableOpacity,
     ScrollView,
-    ActivityIndicator
+    ActivityIndicator,
+    TextInput
 } from 'react-native';
 import { showAlert } from '../../shared/ui/showAlert';
 import { useSession } from '../../session/SessionProvider';
@@ -16,9 +17,11 @@ import { Colors } from '../../shared/ui/Theme';
 import { useEntitlement } from '../../core/entitlements/EntitlementProvider';
 import { selectPlanTemplate } from './selectPlanTemplate';
 import { ConsentChoices, buildConsentRecord, mayStoreHealthData } from '../../core/consent/consent.model';
+import { isValidDateOfBirth, meetsMinimumAge, MIN_AGE } from '../../core/age/age';
 
 
 const STEPS = [
+    { title: 'About you', sub: 'A couple of basics to get started' },
     { title: 'Goal', sub: 'What do you want to achieve?' },
     { title: 'Experience', sub: 'How long have you been training?' },
     { title: 'Equipment', sub: 'What are you working with?' },
@@ -27,8 +30,13 @@ const STEPS = [
     { title: 'Bio', sub: 'Final details' }
 ];
 
-const CONSENT_STEP = 4;
-const BIO_STEP = 5;
+const ABOUT_STEP = 0;
+const GOAL_STEP = 1;
+const EXPERIENCE_STEP = 2;
+const EQUIPMENT_STEP = 3;
+const SCHEDULE_STEP = 4;
+const CONSENT_STEP = 5;
+const BIO_STEP = 6;
 
 const GOALS = [
     { id: 'strength', label: 'Strength', sub: 'Master the big lifts' },
@@ -71,6 +79,8 @@ export const OnboardingWizard = ({ navigation }: any) => {
     const [isSaving, setIsSaving] = useState(false);
 
     const [formData, setFormData] = useState<Partial<UserProfile>>({
+        name: '',
+        dateOfBirth: '',
         goal: undefined,
         experience: undefined,
         equipment: [],
@@ -242,7 +252,9 @@ export const OnboardingWizard = ({ navigation }: any) => {
 
     const renderStepContent = () => {
         switch (currentStep) {
-            case 0: // Goal
+            case ABOUT_STEP:
+                return renderAboutStep();
+            case GOAL_STEP: // Goal
                 return (
                     <View style={styles.stepInner}>
                         {GOALS.map(g => (
@@ -261,7 +273,7 @@ export const OnboardingWizard = ({ navigation }: any) => {
                         ))}
                     </View>
                 );
-            case 1: // Experience
+            case EXPERIENCE_STEP: // Experience
                 return (
                     <View style={styles.stepInner}>
                         {EXPERIENCE.map(e => (
@@ -280,7 +292,7 @@ export const OnboardingWizard = ({ navigation }: any) => {
                         ))}
                     </View>
                 );
-            case 2: // Equipment
+            case EQUIPMENT_STEP: // Equipment
                 return (
                     <View style={styles.stepInner}>
                         <Text style={styles.stepHeaderLabel}>Select what you have access to:</Text>
@@ -298,7 +310,7 @@ export const OnboardingWizard = ({ navigation }: any) => {
                         </View>
                     </View>
                 );
-            case 3: // Schedule
+            case SCHEDULE_STEP: // Schedule
                 return (
                     <View style={styles.stepInner}>
                         <View style={styles.selectionCard}>
@@ -398,13 +410,65 @@ export const OnboardingWizard = ({ navigation }: any) => {
         }
     };
 
+    // Derived age gate: a valid DOB that meets the minimum age.
+    const dob = formData.dateOfBirth || '';
+    const dobEntered = dob.length > 0;
+    const dobValid = dobEntered && isValidDateOfBirth(dob);
+    const ageOk = dobValid && meetsMinimumAge(dob);
+    const ageBlocked = dobValid && !ageOk; // valid date, but under the minimum age
+
     const isStepValid = () => {
-        if (currentStep === 0) return !!formData.goal;
-        if (currentStep === 1) return !!formData.experience;
+        // Entry gate: a real name and a valid, old-enough DOB are required to
+        // leave the first step. Under-16s cannot pass.
+        if (currentStep === ABOUT_STEP) return !!formData.name?.trim() && ageOk;
+        if (currentStep === GOAL_STEP) return !!formData.goal;
+        if (currentStep === EXPERIENCE_STEP) return !!formData.experience;
         // Required consents must both be granted to leave the consent step.
         if (currentStep === CONSENT_STEP) return consent.disclaimer && consent.privacyTerms;
         return true;
     };
+
+    const renderAboutStep = () => (
+        <View style={styles.stepInner}>
+            <Text style={styles.label}>What should we call you?</Text>
+            <TextInput
+                style={styles.input}
+                value={formData.name}
+                onChangeText={t => setFormData({ ...formData, name: t })}
+                placeholder="Your name"
+                placeholderTextColor="rgba(255,255,255,0.25)"
+                autoCapitalize="words"
+                testID="about-name"
+            />
+
+            <Text style={[styles.label, { marginTop: 28 }]}>Date of birth</Text>
+            <Text style={styles.cardSub}>You must be at least {MIN_AGE} to use WorkoutAssist.</Text>
+            <TextInput
+                style={[styles.input, ageBlocked && styles.inputError]}
+                value={formData.dateOfBirth}
+                onChangeText={t => setFormData({ ...formData, dateOfBirth: t })}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor="rgba(255,255,255,0.25)"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="numbers-and-punctuation"
+                testID="about-dob"
+            />
+
+            {dobEntered && !dobValid && (
+                <Text style={styles.inputHint}>Enter a valid date as YYYY-MM-DD.</Text>
+            )}
+            {ageBlocked && (
+                <View style={styles.blockCard} testID="age-block">
+                    <Text style={styles.blockTitle}>Sorry — you’re not old enough yet</Text>
+                    <Text style={styles.blockBody}>
+                        WorkoutAssist is only available to people {MIN_AGE} and older. You can’t
+                        create an account right now.
+                    </Text>
+                </View>
+            )}
+        </View>
+    );
 
     const renderConsentRow = (
         key: keyof ConsentChoices,
@@ -475,9 +539,13 @@ export const OnboardingWizard = ({ navigation }: any) => {
                         <Text style={styles.stepTitle}>{STEPS[currentStep].title}</Text>
                         <Text style={styles.stepSub}>{STEPS[currentStep].sub}</Text>
                     </View>
-                    <TouchableOpacity onPress={handleSkip} style={styles.skipBtnContainer}>
-                        <Text style={styles.skipBtn}>Skip</Text>
-                    </TouchableOpacity>
+                    {/* No Skip on the first step — it is the age gate. Allowing a
+                        skip here would let an under-16 bypass the eligibility check. */}
+                    {currentStep !== ABOUT_STEP && (
+                        <TouchableOpacity onPress={handleSkip} style={styles.skipBtnContainer}>
+                            <Text style={styles.skipBtn}>Skip</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             </View>
 
@@ -761,6 +829,44 @@ const styles = StyleSheet.create({
     legalLink: {
         color: Colors.brandPurple,
         fontWeight: '700',
+    },
+    input: {
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.12)',
+        color: '#fff',
+        fontSize: 16,
+        paddingHorizontal: 16,
+        height: 52,
+        marginTop: 10,
+    },
+    inputError: {
+        borderColor: '#FF5252',
+    },
+    inputHint: {
+        color: '#FFB4B4',
+        fontSize: 13,
+        marginTop: 8,
+    },
+    blockCard: {
+        backgroundColor: 'rgba(255,82,82,0.1)',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,82,82,0.4)',
+        padding: 16,
+        marginTop: 20,
+    },
+    blockTitle: {
+        color: '#FF8A80',
+        fontSize: 16,
+        fontWeight: '800',
+        marginBottom: 6,
+    },
+    blockBody: {
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: 14,
+        lineHeight: 20,
     },
     footer: {
         flexDirection: 'row',
