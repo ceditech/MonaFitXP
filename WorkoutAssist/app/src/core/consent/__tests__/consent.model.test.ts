@@ -1,4 +1,4 @@
-import { buildConsentRecord, hasRequiredConsents, ConsentChoices } from '../consent.model';
+import { buildConsentRecord, hasRequiredConsents, mayStoreHealthData, ConsentChoices } from '../consent.model';
 import { LEGAL_VERSION } from '../../../legal/content';
 
 const choices = (over: Partial<ConsentChoices> = {}): ConsentChoices => ({
@@ -18,6 +18,21 @@ describe('hasRequiredConsents', () => {
 
     it('does not require the optional consents', () => {
         expect(hasRequiredConsents(choices({ healthData: false, marketing: false }))).toBe(true);
+    });
+});
+
+describe('mayStoreHealthData', () => {
+    it('is true only when health consent was granted AND recorded', () => {
+        expect(mayStoreHealthData(choices({ healthData: true }), true)).toBe(true);
+    });
+
+    it('is false when health consent was declined, even if the record saved', () => {
+        expect(mayStoreHealthData(choices({ healthData: false }), true)).toBe(false);
+    });
+
+    it('is false when the consent record failed to save, even if granted', () => {
+        // The compliance guarantee: no Art. 9 data stored without a stored basis.
+        expect(mayStoreHealthData(choices({ healthData: true }), false)).toBe(false);
     });
 });
 

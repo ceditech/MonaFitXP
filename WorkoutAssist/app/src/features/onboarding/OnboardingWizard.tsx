@@ -15,7 +15,7 @@ import { UserProfile } from '../../data/contracts/IWorkoutRepository';
 import { Colors } from '../../shared/ui/Theme';
 import { useEntitlement } from '../../core/entitlements/EntitlementProvider';
 import { selectPlanTemplate } from './selectPlanTemplate';
-import { ConsentChoices, buildConsentRecord } from '../../core/consent/consent.model';
+import { ConsentChoices, buildConsentRecord, mayStoreHealthData } from '../../core/consent/consent.model';
 
 
 const STEPS = [
@@ -155,16 +155,25 @@ export const OnboardingWizard = ({ navigation }: any) => {
 
         setIsSaving(true);
         try {
-            // 0. Record consent first — it is the legal basis for everything that
-            // follows. Without health-data consent, injury flags must not be
-            // persisted (GDPR Art. 9), so strip them from the profile save.
-            await repo.saveConsents(session.uid, buildConsentRecord(consent));
+            // 0. Record consent — the legal basis for everything that follows.
+            // A failure here must NOT trap the user in onboarding (a single
+            // subcollection write shouldn't brick account setup — e.g. if the
+            // consents rules haven't deployed yet), so it is caught, not thrown.
+            // The compliance guarantee is preserved separately below: health data
+            // is stored only when consent was granted AND actually recorded.
+            let consentRecorded = false;
+            try {
+                await repo.saveConsents(session.uid, buildConsentRecord(consent));
+                consentRecorded = true;
+            } catch (consentErr) {
+                console.error('[OnboardingWizard] saveConsents failed; proceeding without storing health data', consentErr);
+            }
 
             const profileToSave: Partial<UserProfile> = {
                 ...formData,
                 onboardingCompleted: true,
             };
-            if (!consent.healthData) {
+            if (!mayStoreHealthData(consent, consentRecorded)) {
                 profileToSave.injuryFlags = [];
             }
 

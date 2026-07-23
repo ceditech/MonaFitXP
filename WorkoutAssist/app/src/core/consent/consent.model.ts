@@ -50,6 +50,19 @@ export function hasRequiredConsents(choices: ConsentChoices): boolean {
 }
 
 /**
+ * Whether injury/health data may be persisted. It requires BOTH that the user
+ * granted health-data consent AND that the consent record was actually saved —
+ * we must never store special-category data (GDPR Art. 9) without a stored basis
+ * for it, even if the consent write failed for an unrelated reason.
+ */
+export function mayStoreHealthData(
+    choices: ConsentChoices,
+    consentRecorded: boolean,
+): boolean {
+    return choices.healthData && consentRecorded;
+}
+
+/**
  * Build the stored record from the user's choices. Pure (time injectable) so the
  * versioning and shape can be unit-tested without Firestore.
  */
