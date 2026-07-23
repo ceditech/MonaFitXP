@@ -155,17 +155,31 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     const signOut = async () => {
-        if (state.mode === 'authenticated') {
-            await firebaseSignOut(auth);
-            // onAuthStateChanged will handle state update
-        } else if (state.mode === 'guest') {
+        // Clear any stored guest session FIRST, before firebaseSignOut fires
+        // onAuthStateChanged(null) → bootstrapGuestSession. Otherwise a lingering
+        // guest uid gets restored as a guest session, which also renders the main
+        // navigator — so signing out (or deleting an account) never leaves the
+        // current screen. That was the cause of the Delete Account spinner hang.
+        try {
             await sessionStorage.removeGuestUid();
-            setState({
-                uid: null,
-                mode: 'none',
-                isLoading: false,
-            });
+        } catch (e) {
+            console.warn('[Session] removeGuestUid failed during signOut', e);
         }
+
+        // Use the live SDK state, not React `state.mode` (which can be stale, and
+        // is already null when the user was deleted server-side).
+        try {
+            if (auth.currentUser) {
+                await firebaseSignOut(auth);
+            }
+        } catch (e) {
+            console.warn('[Session] firebaseSignOut failed; clearing local session anyway', e);
+        }
+
+        // Land deterministically on the fully signed-out state rather than waiting
+        // on onAuthStateChanged, which may not fire (deleted user) or may keep the
+        // previous mode (bootstrapGuestSession's no-guest branch).
+        setState({ uid: null, mode: 'none', isLoading: false });
     };
 
     return (

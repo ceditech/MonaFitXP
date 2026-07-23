@@ -105,6 +105,22 @@ service cloud.firestore {
         allow read, write: if isOwner(uid);
       }
 
+      // Consents: Owner R/W. Unlike metrics/entitlements these ARE client-written
+      // (the onboarding consent step records them), so validate the required
+      // entries are well-formed maps with a boolean `granted`. Delete denied —
+      // consent history should be overwritten, never erased by the client.
+      match /consents/{docId} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.privacyPolicy is map
+          && request.resource.data.privacyPolicy.granted is bool
+          && request.resource.data.healthDisclaimer is map
+          && request.resource.data.healthDisclaimer.granted is bool
+          && request.resource.data.healthDataProcessing is map
+          && request.resource.data.healthDataProcessing.granted is bool;
+        allow delete: if false;
+      }
+
       // Metrics: Owner Read, Server-Only Write (No Client Write)
       match /metrics/{docId} {
         allow read: if isOwner(uid);

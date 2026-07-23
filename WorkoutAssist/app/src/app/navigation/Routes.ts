@@ -7,6 +7,7 @@ export type AuthStackParamList = {
     Welcome: undefined;
     SignIn: undefined;
     SignUp: undefined;
+    Legal: { doc: 'privacy' | 'terms' | 'disclaimer' };
 };
 
 export type MainTabParamList = {
@@ -36,6 +37,7 @@ export type MainStackParamList = {
     Settings: undefined;
     NotificationPrefs: undefined;
     DeleteAccount: undefined;
+    Legal: { doc: 'privacy' | 'terms' | 'disclaimer' };
     Paywall: { source?: string; templateId?: string; returnTo?: string };
     Upgrade: { reason?: string };
     AICoach: undefined;

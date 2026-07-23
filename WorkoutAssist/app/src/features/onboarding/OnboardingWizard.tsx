@@ -15,6 +15,7 @@ import { UserProfile } from '../../data/contracts/IWorkoutRepository';
 import { Colors } from '../../shared/ui/Theme';
 import { useEntitlement } from '../../core/entitlements/EntitlementProvider';
 import { selectPlanTemplate } from './selectPlanTemplate';
+import { ConsentChoices, buildConsentRecord, mayStoreHealthData } from '../../core/consent/consent.model';
 
 
 const STEPS = [
@@ -22,8 +23,12 @@ const STEPS = [
     { title: 'Experience', sub: 'How long have you been training?' },
     { title: 'Equipment', sub: 'What are you working with?' },
     { title: 'Schedule', sub: 'When can you commit?' },
+    { title: 'Permissions', sub: 'A few consents before we start' },
     { title: 'Bio', sub: 'Final details' }
 ];
+
+const CONSENT_STEP = 4;
+const BIO_STEP = 5;
 
 const GOALS = [
     { id: 'strength', label: 'Strength', sub: 'Master the big lifts' },
@@ -74,6 +79,13 @@ export const OnboardingWizard = ({ navigation }: any) => {
         injuryFlags: [],
         sessionMinutes: 45,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+
+    const [consent, setConsent] = useState<ConsentChoices>({
+        disclaimer: false,
+        privacyTerms: false,
+        healthData: false,
+        marketing: false,
     });
 
     useEffect(() => {
@@ -143,11 +155,30 @@ export const OnboardingWizard = ({ navigation }: any) => {
 
         setIsSaving(true);
         try {
-            // 1. Save User Profile
-            await repo.saveUserProfile(session.uid, {
+            // 0. Record consent — the legal basis for everything that follows.
+            // A failure here must NOT trap the user in onboarding (a single
+            // subcollection write shouldn't brick account setup — e.g. if the
+            // consents rules haven't deployed yet), so it is caught, not thrown.
+            // The compliance guarantee is preserved separately below: health data
+            // is stored only when consent was granted AND actually recorded.
+            let consentRecorded = false;
+            try {
+                await repo.saveConsents(session.uid, buildConsentRecord(consent));
+                consentRecorded = true;
+            } catch (consentErr) {
+                console.error('[OnboardingWizard] saveConsents failed; proceeding without storing health data', consentErr);
+            }
+
+            const profileToSave: Partial<UserProfile> = {
                 ...formData,
                 onboardingCompleted: true,
-            });
+            };
+            if (!mayStoreHealthData(consent, consentRecorded)) {
+                profileToSave.injuryFlags = [];
+            }
+
+            // 1. Save User Profile
+            await repo.saveUserProfile(session.uid, profileToSave);
 
             // 2. Create and Activate a starting plan.
             // Ranked on difficulty/schedule/equipment (and goal once templates
@@ -310,22 +341,35 @@ export const OnboardingWizard = ({ navigation }: any) => {
                         </View>
                     </View>
                 );
-            case 4: // Bio
+            case CONSENT_STEP:
+                return renderConsentStep();
+            case BIO_STEP: // Bio
                 return (
                     <View style={styles.stepInner}>
-                        <Text style={styles.label}>Any focus areas or minor injuries?</Text>
-                        <View style={styles.wrapContainer}>
-                            {INJURIES.map(i => (
-                                <TouchableOpacity
-                                    key={i.id}
-                                    activeOpacity={0.7}
-                                    style={[styles.chip, formData.injuryFlags?.includes(i.id) && styles.chipSelected]}
-                                    onPress={() => toggleMultiSelect('injuryFlags', i.id)}
-                                >
-                                    <Text style={[styles.chipText, formData.injuryFlags?.includes(i.id) && styles.chipTextSelected]}>{i.label}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
+                        {consent.healthData ? (
+                            <>
+                                <Text style={styles.label}>Any focus areas or minor injuries?</Text>
+                                <View style={styles.wrapContainer}>
+                                    {INJURIES.map(i => (
+                                        <TouchableOpacity
+                                            key={i.id}
+                                            activeOpacity={0.7}
+                                            style={[styles.chip, formData.injuryFlags?.includes(i.id) && styles.chipSelected]}
+                                            onPress={() => toggleMultiSelect('injuryFlags', i.id)}
+                                        >
+                                            <Text style={[styles.chipText, formData.injuryFlags?.includes(i.id) && styles.chipTextSelected]}>{i.label}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </>
+                        ) : (
+                            // Health-data consent was declined — do not collect injury
+                            // information. The app stays fully usable without it.
+                            <Text style={styles.cardSub}>
+                                You chose not to share health information, so we won’t ask about
+                                injuries. You can change this anytime in Settings.
+                            </Text>
+                        )}
 
                         <View style={[styles.selectionCard, { marginTop: 32 }]}>
                             <Text style={styles.label}>Target session length (min)</Text>
@@ -357,8 +401,68 @@ export const OnboardingWizard = ({ navigation }: any) => {
     const isStepValid = () => {
         if (currentStep === 0) return !!formData.goal;
         if (currentStep === 1) return !!formData.experience;
+        // Required consents must both be granted to leave the consent step.
+        if (currentStep === CONSENT_STEP) return consent.disclaimer && consent.privacyTerms;
         return true;
     };
+
+    const renderConsentRow = (
+        key: keyof ConsentChoices,
+        label: React.ReactNode,
+        required: boolean,
+    ) => {
+        const checked = consent[key];
+        return (
+            <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.consentRow}
+                onPress={() => setConsent(c => ({ ...c, [key]: !c[key] }))}
+                testID={`consent-${key}`}
+            >
+                <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+                    {checked && <Text style={styles.checkboxTick}>✓</Text>}
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.consentText}>{label}</Text>
+                    {required && <Text style={styles.consentRequired}>Required</Text>}
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
+    const legalLink = (text: string, doc: 'privacy' | 'terms' | 'disclaimer') => (
+        <Text style={styles.legalLink} onPress={() => navigation.navigate('Legal', { doc })}>
+            {text}
+        </Text>
+    );
+
+    const renderConsentStep = () => (
+        <View style={styles.stepInner}>
+            {renderConsentRow(
+                'disclaimer',
+                <>I have read and understand the {legalLink('Health & Safety Disclaimer', 'disclaimer')}.</>,
+                true,
+            )}
+            {renderConsentRow(
+                'privacyTerms',
+                <>I accept the {legalLink('Privacy Policy', 'privacy')} and {legalLink('Terms of Service', 'terms')}.</>,
+                true,
+            )}
+            {renderConsentRow(
+                'healthData',
+                <>Use my injury and health information to personalize and keep my workouts safe.</>,
+                false,
+            )}
+            {renderConsentRow(
+                'marketing',
+                <>Send me occasional product updates and tips by email.</>,
+                false,
+            )}
+            <Text style={styles.metaText}>
+                You can change these anytime in Settings.
+            </Text>
+        </View>
+    );
 
     return (
         <View style={styles.container}>
@@ -611,6 +715,52 @@ const styles = StyleSheet.create({
         fontSize: 13,
         marginTop: 48,
         textAlign: 'center',
+    },
+    consentRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: 'rgba(255,255,255,0.04)',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+        padding: 16,
+        marginBottom: 12,
+    },
+    checkbox: {
+        width: 24,
+        height: 24,
+        borderRadius: 7,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,255,255,0.3)',
+        marginRight: 14,
+        marginTop: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    checkboxChecked: {
+        backgroundColor: Colors.brandPurple,
+        borderColor: Colors.brandPurple,
+    },
+    checkboxTick: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: '800',
+    },
+    consentText: {
+        color: 'rgba(255,255,255,0.85)',
+        fontSize: 15,
+        lineHeight: 22,
+    },
+    consentRequired: {
+        color: 'rgba(255,255,255,0.4)',
+        fontSize: 12,
+        fontWeight: '700',
+        marginTop: 4,
+        letterSpacing: 0.5,
+    },
+    legalLink: {
+        color: Colors.brandPurple,
+        fontWeight: '700',
     },
     footer: {
         flexDirection: 'row',

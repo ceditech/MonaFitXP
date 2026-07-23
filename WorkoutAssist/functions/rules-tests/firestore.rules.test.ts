@@ -223,6 +223,51 @@ describe('custom exercises validation', () => {
     });
 });
 
+describe('consents', () => {
+    const valid = {
+        healthDisclaimer: { granted: true, version: 'v1', grantedAt: 'x' },
+        privacyPolicy: { granted: true, version: 'v1', grantedAt: 'x' },
+        healthDataProcessing: { granted: false, version: 'v1', grantedAt: 'x' },
+        marketing: { granted: false, version: 'v1', grantedAt: 'x' },
+        updatedAt: 'x',
+    };
+
+    it('lets the owner write and read their own consent record', async () => {
+        await assertSucceeds(
+            setDoc(doc(asUser(ALICE), `users/${ALICE}/consents/current`), valid),
+        );
+        await assertSucceeds(getDoc(doc(asUser(ALICE), `users/${ALICE}/consents/current`)));
+    });
+
+    it('rejects a record missing a required consent entry', async () => {
+        const withoutPrivacy: Record<string, unknown> = { ...valid };
+        delete withoutPrivacy.privacyPolicy;
+        await assertFails(
+            setDoc(doc(asUser(ALICE), `users/${ALICE}/consents/current`), withoutPrivacy),
+        );
+    });
+
+    it('rejects a non-boolean granted field', async () => {
+        await assertFails(
+            setDoc(doc(asUser(ALICE), `users/${ALICE}/consents/current`), {
+                ...valid,
+                privacyPolicy: { granted: 'yes', version: 'v1', grantedAt: 'x' },
+            }),
+        );
+    });
+
+    it("blocks writing into another user's consents", async () => {
+        await assertFails(
+            setDoc(doc(asUser(BOB), `users/${ALICE}/consents/current`), valid),
+        );
+    });
+
+    it('denies client deletion of consent history', async () => {
+        await seed(`users/${ALICE}/consents/current`, valid);
+        await assertFails(deleteDoc(doc(asUser(ALICE), `users/${ALICE}/consents/current`)));
+    });
+});
+
 describe('metrics are server-write-only (anti-cheat)', () => {
     it('lets the owner read their metrics', async () => {
         await seed(`users/${ALICE}/metrics/gamification`, { xp: 100, level: 2 });

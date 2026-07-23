@@ -52,20 +52,35 @@ export const DeleteAccountScreen: React.FC<Props> = ({ navigation }) => {
     const handleDelete = async () => {
         if (!canDelete) return;
         setIsDeleting(true);
+
         try {
             await requestAccountDeletion();
-            // The Auth record is gone server-side; clear local session so the app
-            // returns to the signed-out state rather than holding a dead token.
-            await signOut();
-            // No navigation needed — RootNavigator swaps to the auth stack once the
-            // session clears. This runs only if that hasn't happened yet.
         } catch (e) {
+            // Only a failure of the deletion call itself is a real error.
             setIsDeleting(false);
             showAlert(
                 'Deletion failed',
                 'Your account could not be deleted. Please try again or contact support.',
             );
+            return;
         }
+
+        // The account is gone server-side — this is now the source of truth.
+        // Signing out is best-effort local cleanup: it must never surface as a
+        // deletion error, and must never hang the screen on a dead spinner. Time-
+        // box it so even a stuck signOut can't trap the user.
+        try {
+            await Promise.race([
+                signOut(),
+                new Promise<void>(resolve => setTimeout(() => resolve(), 4000)),
+            ]);
+        } catch (e) {
+            console.warn('[DeleteAccount] post-deletion signOut failed (non-fatal)', e);
+        }
+
+        // signOut clears the session, so RootNavigator swaps to the auth stack and
+        // this screen unmounts. Clearing the flag is the safety net if it doesn't.
+        setIsDeleting(false);
     };
 
     return (
