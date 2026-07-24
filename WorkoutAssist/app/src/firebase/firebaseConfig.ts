@@ -17,3 +17,12 @@ export const firebaseConfig: FirebaseConfig = {
     appId: "1:240590572665:web:d9ff0db114bf095507d8a8",
     measurementId: "G-NX4W2PEQXD"
 };
+
+/**
+ * App Check reCAPTCHA v3 site key (web only). This is a PUBLIC key — safe to
+ * commit, same as the config above; the secret half lives in the Firebase
+ * console. Empty until the owner registers the web app for App Check and pastes
+ * the key here — while empty, App Check initialization is skipped and the app
+ * runs unchanged. See docs/APP_CHECK.md.
+ */
+export const recaptchaV3SiteKey = "";
