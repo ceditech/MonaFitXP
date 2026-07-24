@@ -6,6 +6,12 @@ import { getFunctions } from "firebase/functions";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { firebaseConfig } from "./firebaseConfig";
 
+// NOTE: App Check is intentionally NOT initialized on native. The Firebase JS
+// SDK's only provider is reCAPTCHA (web/DOM), and native App Check needs
+// @react-native-firebase/app-check, which this project doesn't use. See
+// appCheck.ts and docs/APP_CHECK.md — enforcement must stay off until this gap
+// is closed, or the native app would be blocked from the backend.
+
 /**
  * NATIVE (iOS / Android) Firebase setup.
  *

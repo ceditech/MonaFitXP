@@ -3,9 +3,15 @@ import { getAuth, browserLocalPersistence, setPersistence } from "firebase/auth"
 import { getFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 import { firebaseConfig } from "./firebaseConfig";
+import { initAppCheck } from "./appCheck";
 
 // Initialize Firebase
 const firebaseApp = initializeApp(firebaseConfig);
+
+// App Check (web). Initialized before the other services so its token attaches
+// to their requests. No-op until a reCAPTCHA site key is configured. See
+// appCheck.ts / docs/APP_CHECK.md — and note native is deliberately not covered.
+initAppCheck(firebaseApp);
 
 // Initialize Auth
 const auth = getAuth(firebaseApp);

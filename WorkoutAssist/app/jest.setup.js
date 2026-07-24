@@ -65,6 +65,12 @@ jest.mock('firebase/functions', () =>
     httpsCallable: jest.fn(() => jest.fn(() => Promise.resolve({ data: {} }))),
   }),
 );
+jest.mock('firebase/app-check', () =>
+  makeFirebaseModuleMock({
+    initializeAppCheck: jest.fn(() => ({})),
+    ReCaptchaV3Provider: jest.fn(function ReCaptchaV3Provider() {}),
+  }),
+);
 
 // Sentry: the native module doesn't exist in jest; keep the surface our
 // code touches (init/wrap/captureException/addBreadcrumb) as no-ops.
