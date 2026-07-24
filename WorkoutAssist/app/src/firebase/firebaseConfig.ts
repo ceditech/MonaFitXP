@@ -25,4 +25,4 @@ export const firebaseConfig: FirebaseConfig = {
  * the key here — while empty, App Check initialization is skipped and the app
  * runs unchanged. See docs/APP_CHECK.md.
  */
-export const recaptchaV3SiteKey = "";
+export const recaptchaV3SiteKey = "6LcPkGItAAAAAFwDdsv9gLDQ3-ki4ZkPpaIL1lVF";
